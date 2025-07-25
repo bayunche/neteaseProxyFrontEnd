@@ -1,6 +1,6 @@
 import { neteaseAPI } from './NetEaseAPI';
 import { API_ENDPOINTS, AUDIO_QUALITY } from './config';
-import { getProxyUrl } from './proxy-config';
+import { getAudioProxyUrl, getImageProxyUrl } from './proxy-config';
 import type { 
   SongUrlRequest,
   SongUrlResponse,
@@ -57,8 +57,8 @@ export class SongAPI {
 
       logger.info(`成功获取歌曲 ${id} 播放URL，音质: ${songData.br}`);
       
-      // 转换为代理URL以解决CORS问题
-      const proxiedUrl = this.convertToProxyUrl(songData.url);
+      // 转换为音频代理URL以解决CORS问题
+      const proxiedUrl = this.convertToAudioProxyUrl(songData.url);
       return proxiedUrl;
 
     } catch (error) {
@@ -297,21 +297,47 @@ export class SongAPI {
   }
 
   /**
-   * 转换为代理URL以解决CORS问题
+   * 转换为音频代理URL以解决CORS问题
    * @param originalUrl 原始音频URL
    */
-  private static convertToProxyUrl(originalUrl: string): string {
+  private static convertToAudioProxyUrl(originalUrl: string): string {
     if (!originalUrl) return originalUrl;
     
     try {
-      // 使用统一的代理配置
-      const proxyUrl = getProxyUrl(originalUrl);
-      logger.info(`转换代理URL: ${originalUrl} -> ${proxyUrl}`);
+      // 使用音频代理配置
+      const proxyUrl = getAudioProxyUrl(originalUrl);
+      logger.info(`转换音频代理URL: ${originalUrl} -> ${proxyUrl}`);
       return proxyUrl;
     } catch (error) {
-      logger.warn('URL转换失败，返回原始URL', error);
+      logger.warn('音频URL转换失败，返回原始URL', error);
       return originalUrl;
     }
+  }
+
+  /**
+   * 转换为图片代理URL以解决CORS问题
+   * @param originalUrl 原始图片URL
+   */
+  private static convertToImageProxyUrl(originalUrl: string): string {
+    if (!originalUrl) return originalUrl;
+    
+    try {
+      // 使用图片代理配置
+      const proxyUrl = getImageProxyUrl(originalUrl);
+      logger.info(`转换图片代理URL: ${originalUrl} -> ${proxyUrl}`);
+      return proxyUrl;
+    } catch (error) {
+      logger.warn('图片URL转换失败，返回原始URL', error);
+      return originalUrl;
+    }
+  }
+
+  /**
+   * 转换为代理URL以解决CORS问题（向后兼容）
+   * @param originalUrl 原始音频URL
+   */
+  private static convertToProxyUrl(originalUrl: string): string {
+    return this.convertToAudioProxyUrl(originalUrl);
   }
 
   /**
@@ -324,17 +350,17 @@ export class SongAPI {
       artists: rawSong.ar?.map((artist: any) => ({
         id: artist.id,
         name: artist.name,
-        picUrl: artist.picUrl,
+        picUrl: artist.picUrl ? this.convertToImageProxyUrl(artist.picUrl) : artist.picUrl,
         alias: artist.alias
       })) || [],
       album: {
         id: rawSong.al?.id,
         name: rawSong.al?.name,
-        picUrl: rawSong.al?.picUrl,
+        picUrl: rawSong.al?.picUrl ? this.convertToImageProxyUrl(rawSong.al?.picUrl) : rawSong.al?.picUrl,
         publishTime: rawSong.al?.publishTime
       },
       duration: rawSong.dt || 0,
-      picUrl: rawSong.al?.picUrl,
+      picUrl: rawSong.al?.picUrl ? this.convertToImageProxyUrl(rawSong.al?.picUrl) : rawSong.al?.picUrl,
       fee: rawSong.fee,
       mvid: rawSong.mv
     };

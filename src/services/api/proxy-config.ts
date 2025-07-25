@@ -8,11 +8,12 @@ export const PROXY_CONFIG = {
   // 本地开发环境代理
   LOCAL: import.meta.env.VITE_AUDIO_PROXY_LOCAL || 'http://localhost:3001',
   
-  // 生产环境代理（从环境变量读取或使用默认值）
-  PRODUCTION: import.meta.env.VITE_AUDIO_PROXY_PRODUCTION || 'https://audio-proxy.your-domain.com',
+  // 生产环境代理（公网服务器地址）
+  PRODUCTION: import.meta.env.VITE_AUDIO_PROXY_PRODUCTION || 'http://8.134.196.44:3001',
   
   // 代理端点路径
-  ENDPOINT: '/audio-proxy'
+  AUDIO_ENDPOINT: '/audio-proxy',
+  IMAGE_ENDPOINT: '/image-proxy'
 } as const;
 
 /**
@@ -29,21 +30,47 @@ export function getProxyBaseUrl(): string {
 }
 
 /**
- * 获取完整的代理URL
+ * 获取音频代理URL
  * @param originalUrl 原始音频URL
  */
-export function getProxyUrl(originalUrl: string): string {
+export function getAudioProxyUrl(originalUrl: string): string {
   if (!originalUrl) return originalUrl;
   
   // 如果已经是代理URL，直接返回
-  if (originalUrl.includes('audio-proxy')) {
+  if (originalUrl.includes('audio-proxy') || originalUrl.includes('image-proxy')) {
     return originalUrl;
   }
   
   const baseUrl = getProxyBaseUrl();
-  const endpoint = PROXY_CONFIG.ENDPOINT;
+  const endpoint = PROXY_CONFIG.AUDIO_ENDPOINT;
   
   return `${baseUrl}${endpoint}?url=${encodeURIComponent(originalUrl)}`;
+}
+
+/**
+ * 获取图片代理URL
+ * @param originalUrl 原始图片URL
+ */
+export function getImageProxyUrl(originalUrl: string): string {
+  if (!originalUrl) return originalUrl;
+  
+  // 如果已经是代理URL，直接返回
+  if (originalUrl.includes('audio-proxy') || originalUrl.includes('image-proxy')) {
+    return originalUrl;
+  }
+  
+  const baseUrl = getProxyBaseUrl();
+  const endpoint = PROXY_CONFIG.IMAGE_ENDPOINT;
+  
+  return `${baseUrl}${endpoint}?url=${encodeURIComponent(originalUrl)}`;
+}
+
+/**
+ * 获取完整的代理URL（向后兼容）
+ * @param originalUrl 原始URL
+ */
+export function getProxyUrl(originalUrl: string): string {
+  return getAudioProxyUrl(originalUrl);
 }
 
 /**

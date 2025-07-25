@@ -128,13 +128,13 @@ const audioProxy = createProxyMiddleware({
   }
 });
 
-// 音频代理路由
-app.use('/audio-proxy', (req, res, next) => {
+// 通用代理验证中间件
+const validateProxyRequest = (req, res, next) => {
   // 验证URL参数
   if (!req.query.url) {
     return res.status(400).json({
       error: '缺少必需的URL参数',
-      usage: '/audio-proxy?url=<encoded_audio_url>',
+      usage: '/audio-proxy?url=<encoded_url> 或 /image-proxy?url=<encoded_url>',
       timestamp: new Date().toISOString()
     });
   }
@@ -151,7 +151,13 @@ app.use('/audio-proxy', (req, res, next) => {
   }
   
   next();
-}, audioProxy);
+};
+
+// 音频代理路由
+app.use('/audio-proxy', validateProxyRequest, audioProxy);
+
+// 图片代理路由（使用相同的代理逻辑）
+app.use('/image-proxy', validateProxyRequest, audioProxy);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
@@ -169,16 +175,18 @@ app.get('/health', (req, res) => {
 // API信息端点
 app.get('/info', (req, res) => {
   res.json({
-    name: 'Audio Proxy Server',
-    description: '音频代理服务器 - 解决音频文件CORS跨域问题',
+    name: 'Audio & Image Proxy Server',
+    description: '音频和图片代理服务器 - 解决CORS跨域问题',
     version: '1.0.0',
     endpoints: {
       health: '/health',
-      proxy: '/audio-proxy?url=<encoded_audio_url>',
+      audioProxy: '/audio-proxy?url=<encoded_audio_url>',
+      imageProxy: '/image-proxy?url=<encoded_image_url>',
       info: '/info'
     },
     usage: {
-      example: `/audio-proxy?url=${encodeURIComponent('http://example.com/audio.mp3')}`,
+      audioExample: `/audio-proxy?url=${encodeURIComponent('http://example.com/audio.mp3')}`,
+      imageExample: `/image-proxy?url=${encodeURIComponent('http://example.com/image.jpg')}`,
       note: 'URL参数必须进行URL编码'
     },
     timestamp: new Date().toISOString()
@@ -195,7 +203,7 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: '端点不存在',
     path: req.originalUrl,
-    availableEndpoints: ['/health', '/info', '/audio-proxy'],
+    availableEndpoints: ['/health', '/info', '/audio-proxy', '/image-proxy'],
     timestamp: new Date().toISOString()
   });
 });
