@@ -40,93 +40,108 @@ app.use((req, res, next) => {
   next();
 });
 
+// 创建通用代理中间件
+const createProxyHandler = (isImage = false) => {
+  return createProxyMiddleware({
+    target: 'http://placeholder.com', // 占位符，会被动态替换
+    changeOrigin: true,
+    secure: false,
+    timeout: 30000, // 30秒超时
+    proxyTimeout: 30000,
+    router: (req) => {
+      const originalUrl = req.query.url;
+      if (originalUrl) {
+        try {
+          const url = new URL(originalUrl);
+          const target = `${url.protocol}//${url.host}`;
+          logger.info(`${isImage ? '图片' : '音频'}代理目标: ${target}`);
+          return target;
+        } catch (error) {
+          logger.error('Invalid URL in router:', originalUrl, error.message);
+          return 'http://localhost:3001';
+        }
+      }
+      return 'http://localhost:3001';
+    },
+    pathRewrite: (path, req) => {
+      const originalUrl = req.query.url;
+      if (originalUrl) {
+        try {
+          const url = new URL(originalUrl);
+          const newPath = url.pathname + url.search;
+          logger.info(`路径重写: ${path} -> ${newPath}`);
+          return newPath;
+        } catch (error) {
+          logger.error('Invalid URL for path rewrite:', originalUrl, error.message);
+          return '/';
+        }
+      }
+      return '/';
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      // 设置必要的请求头
+      proxyReq.setHeader('Referer', 'https://music.163.com/');
+      proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+      
+      if (isImage) {
+        proxyReq.setHeader('Accept', 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8');
+      } else {
+        proxyReq.setHeader('Accept', 'audio/mpeg,audio/ogg,audio/wav,audio/*,*/*;q=0.9');
+      }
+      
+      proxyReq.setHeader('Accept-Language', 'zh-CN,zh;q=0.9,en;q=0.8');
+      proxyReq.setHeader('Cache-Control', 'no-cache');
+      proxyReq.setHeader('Pragma', 'no-cache');
+      
+      // 移除可能引起问题的请求头
+      proxyReq.removeHeader('host');
+      proxyReq.removeHeader('origin');
+      
+      logger.info(`${isImage ? '图片' : '音频'}代理请求: ${req.query.url}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      // 设置CORS响应头
+      const origin = req.headers.origin;
+      if (corsOptions.origin.some(allowedOrigin => {
+        if (typeof allowedOrigin === 'string') return allowedOrigin === origin;
+        if (allowedOrigin instanceof RegExp) return allowedOrigin.test(origin);
+        return false;
+      })) {
+        proxyRes.headers['Access-Control-Allow-Origin'] = origin;
+      }
+      
+      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+      proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
+      proxyRes.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization';
+      
+      // 设置缓存头
+      if (proxyRes.statusCode === 200) {
+        proxyRes.headers['Cache-Control'] = 'public, max-age=3600'; // 缓存1小时
+      }
+      
+      logger.info(`${isImage ? '图片' : '音频'}代理响应: ${proxyRes.statusCode} - ${req.query.url}`);
+    },
+    onError: (err, req, res) => {
+      logger.error(`${isImage ? '图片' : '音频'}代理错误:`, err.message, '- URL:', req.query.url);
+      
+      if (!res.headersSent) {
+        res.status(502).json({ 
+          error: '代理服务器错误', 
+          message: NODE_ENV === 'development' ? err.message : '服务暂时不可用',
+          url: req.query.url,
+          timestamp: new Date().toISOString(),
+          type: isImage ? 'image' : 'audio'
+        });
+      }
+    }
+  });
+};
+
 // 音频代理中间件
-const audioProxy = createProxyMiddleware({
-  target: 'http://placeholder.com', // 占位符，会被动态替换
-  changeOrigin: true,
-  secure: false,
-  timeout: 30000, // 30秒超时
-  proxyTimeout: 30000,
-  router: (req) => {
-    const originalUrl = req.query.url;
-    if (originalUrl) {
-      try {
-        const url = new URL(originalUrl);
-        const target = `${url.protocol}//${url.host}`;
-        logger.info(`代理目标: ${target}`);
-        return target;
-      } catch (error) {
-        logger.error('Invalid URL in router:', originalUrl, error.message);
-        return 'http://localhost:3001';
-      }
-    }
-    return 'http://localhost:3001';
-  },
-  pathRewrite: (path, req) => {
-    const originalUrl = req.query.url;
-    if (originalUrl) {
-      try {
-        const url = new URL(originalUrl);
-        const newPath = url.pathname + url.search;
-        logger.info(`路径重写: ${path} -> ${newPath}`);
-        return newPath;
-      } catch (error) {
-        logger.error('Invalid URL for path rewrite:', originalUrl, error.message);
-        return '/';
-      }
-    }
-    return '/';
-  },
-  onProxyReq: (proxyReq, req, res) => {
-    // 设置必要的请求头
-    proxyReq.setHeader('Referer', 'https://music.163.com/');
-    proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    proxyReq.setHeader('Accept', 'audio/mpeg,audio/ogg,audio/wav,audio/*,*/*;q=0.9');
-    proxyReq.setHeader('Accept-Language', 'zh-CN,zh;q=0.9,en;q=0.8');
-    proxyReq.setHeader('Cache-Control', 'no-cache');
-    proxyReq.setHeader('Pragma', 'no-cache');
-    
-    // 移除可能引起问题的请求头
-    proxyReq.removeHeader('host');
-    proxyReq.removeHeader('origin');
-    
-    logger.info(`代理请求: ${req.query.url}`);
-  },
-  onProxyRes: (proxyRes, req, res) => {
-    // 设置CORS响应头
-    const origin = req.headers.origin;
-    if (corsOptions.origin.some(allowedOrigin => {
-      if (typeof allowedOrigin === 'string') return allowedOrigin === origin;
-      if (allowedOrigin instanceof RegExp) return allowedOrigin.test(origin);
-      return false;
-    })) {
-      proxyRes.headers['Access-Control-Allow-Origin'] = origin;
-    }
-    
-    proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
-    proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
-    proxyRes.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization';
-    
-    // 设置缓存头
-    if (proxyRes.statusCode === 200) {
-      proxyRes.headers['Cache-Control'] = 'public, max-age=3600'; // 缓存1小时
-    }
-    
-    logger.info(`代理响应: ${proxyRes.statusCode} - ${req.query.url}`);
-  },
-  onError: (err, req, res) => {
-    logger.error('代理错误:', err.message, '- URL:', req.query.url);
-    
-    if (!res.headersSent) {
-      res.status(502).json({ 
-        error: '代理服务器错误', 
-        message: NODE_ENV === 'development' ? err.message : '服务暂时不可用',
-        url: req.query.url,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }
-});
+const audioProxy = createProxyHandler(false);
+
+// 图片代理中间件
+const imageProxy = createProxyHandler(true);
 
 // 通用代理验证中间件
 const validateProxyRequest = (req, res, next) => {
@@ -156,8 +171,8 @@ const validateProxyRequest = (req, res, next) => {
 // 音频代理路由
 app.use('/audio-proxy', validateProxyRequest, audioProxy);
 
-// 图片代理路由（使用相同的代理逻辑）
-app.use('/image-proxy', validateProxyRequest, audioProxy);
+// 图片代理路由（使用专门的图片代理中间件）
+app.use('/image-proxy', validateProxyRequest, imageProxy);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
