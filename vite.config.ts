@@ -10,7 +10,7 @@ export default defineConfig({
         target: 'http://8.134.196.44:8210',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => path.replace(/^\/api/, '')
       },
       // 代理音频文件 - 动态代理不同的音频服务器
       '^/audio/.*': {

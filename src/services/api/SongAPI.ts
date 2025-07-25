@@ -23,7 +23,7 @@ export class SongAPI {
    */
   static async getSongUrl(
     id: number,
-    br: number = AUDIO_QUALITY.HIGH
+    br: number = AUDIO_QUALITY.LOSSLESS
   ): Promise<string | null> {
     if (!id || id <= 0) {
       throw new Error('歌曲ID无效');
@@ -75,7 +75,7 @@ export class SongAPI {
    */
   static async getBatchSongUrls(
     ids: number[],
-    br: number = AUDIO_QUALITY.HIGH
+    br: number = AUDIO_QUALITY.LOSSLESS
   ): Promise<Record<number, string | null>> {
     if (!ids || ids.length === 0) {
       return {};

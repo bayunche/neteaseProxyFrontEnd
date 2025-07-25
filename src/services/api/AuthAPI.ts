@@ -1,6 +1,6 @@
 import { neteaseAPI } from './NetEaseAPI';
 import { APIError } from './types';
-import type { 
+import type {
   User,
   APIResponse,
   APIErrorType
@@ -67,7 +67,7 @@ export class AuthAPI {
 
     try {
       const response = await neteaseAPI.get<SendCodeResponse>(
-        '/captcha/sent',
+        '/user/sent',
         { phone }
       );
 
@@ -76,7 +76,7 @@ export class AuthAPI {
 
     } catch (error) {
       logger.error('发送验证码失败', error);
-      
+
       if (error instanceof Error) {
         // 处理特定错误
         if (error.message.includes('429')) {
@@ -86,7 +86,7 @@ export class AuthAPI {
           throw new Error('手机号格式不正确');
         }
       }
-      
+
       throw error;
     }
   }
@@ -118,7 +118,7 @@ export class AuthAPI {
 
     try {
       const response = await neteaseAPI.get<LoginWithCodeResponse>(
-        '/login/cellphone',
+        '/user/cellphone',
         { phone, captcha: code }
       );
 
@@ -133,7 +133,7 @@ export class AuthAPI {
 
     } catch (error) {
       logger.error('验证码登录失败', error);
-      
+
       if (error instanceof Error) {
         // 处理特定的登录错误
         if (error.message.includes('400') || error.message.includes('验证码')) {
@@ -146,7 +146,7 @@ export class AuthAPI {
           throw new Error('登录凭据无效');
         }
       }
-      
+
       throw error;
     }
   }
@@ -205,12 +205,12 @@ export class AuthAPI {
     if (loginData.profile) {
       this.currentUser = loginData.profile;
     }
-    
+
     // 设置认证token
     if (loginData.token) {
       this.authToken = loginData.token;
     }
-    
+
     // 设置cookie
     if (loginData.cookie) {
       this.loginCookie = loginData.cookie;
@@ -296,7 +296,7 @@ export class AuthAPI {
    */
   static async autoLogin(): Promise<boolean> {
     this.restoreAuthState();
-    
+
     if (!this.isLoggedIn()) {
       return false;
     }

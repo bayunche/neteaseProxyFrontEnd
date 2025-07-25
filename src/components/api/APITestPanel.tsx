@@ -20,6 +20,7 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
   const [loading, setLoading] = useState<string | null>(null);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
 
   // 清除结果
   const clearResults = () => {
@@ -81,6 +82,34 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
     });
   };
 
+  // 测试API连接状态
+  const testApiConnection = async () => {
+    await executeTest('API连接测试', async () => {
+      // 使用一个简单的搜索请求来测试连接
+      const result = await SearchAPI.search('test', SearchType.SONG, 1);
+      return {
+        connected: true,
+        environment: import.meta.env.DEV ? 'development' : 'production',
+        proxyPath: import.meta.env.DEV ? '/api → http://8.134.196.44:8210' : 'direct',
+        server: import.meta.env.DEV ? 'Vite Proxy' : 'http://8.134.196.44:8210',
+        testResult: result,
+        timestamp: new Date().toISOString()
+      };
+    });
+  };
+
+  // 测试登录状态
+  const testLoginStatus = async () => {
+    await executeTest('登录状态检查', async () => {
+      return {
+        isLoggedIn: AuthAPI.isLoggedIn(),
+        currentUser: AuthAPI.getCurrentUser(),
+        authToken: AuthAPI.getAuthToken() ? '已设置' : '未设置',
+        loginCookie: AuthAPI.getLoginCookie() ? '已设置' : '未设置'
+      };
+    });
+  };
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* 登录面板 */}
@@ -122,55 +151,95 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
       </div>
 
       {/* 测试按钮 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        <Button
-          onClick={testSearch}
-          disabled={loading !== null || !searchKeyword.trim()}
-          className="w-full"
-          variant="primary"
-        >
-          🔍 测试搜索
-        </Button>
-        <Button
-          onClick={testSongUrl}
-          disabled={loading !== null || !songId.trim()}
-          className="w-full"
-          variant="primary"
-        >
-          🎵 测试歌曲URL
-        </Button>
-        <Button
-          onClick={testSongDetail}
-          disabled={loading !== null || !songId.trim()}
-          className="w-full"
-          variant="primary"
-        >
-          📄 测试歌曲详情
-        </Button>
-        <Button
-          onClick={testSearchSuggestions}
-          disabled={loading !== null || !searchKeyword.trim()}
-          className="w-full"
-          variant="secondary"
-        >
-          💡 搜索建议
-        </Button>
-        <Button
-          onClick={testHotSearch}
-          disabled={loading !== null}
-          className="w-full"
-          variant="secondary"
-        >
-          🔥 热门搜索
-        </Button>
-        <Button
-          onClick={clearResults}
-          disabled={loading !== null}
-          className="w-full"
-          variant="outline"
-        >
-          🗑️ 清除结果
-        </Button>
+      <div className="space-y-4 mb-6">
+        {/* 基础API测试 */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">🔧 基础功能测试</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button
+              onClick={testApiConnection}
+              disabled={loading !== null}
+              className="w-full"
+              variant="primary"
+            >
+              🌐 API连接测试
+            </Button>
+            <Button
+              onClick={testLoginStatus}
+              disabled={loading !== null}
+              className="w-full"
+              variant="primary"
+            >
+              👤 登录状态检查
+            </Button>
+          </div>
+        </div>
+
+        {/* 搜索功能测试 */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">🔍 搜索功能测试</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button
+              onClick={testSearch}
+              disabled={loading !== null || !searchKeyword.trim()}
+              className="w-full"
+              variant="primary"
+            >
+              🔍 测试搜索
+            </Button>
+            <Button
+              onClick={testSearchSuggestions}
+              disabled={loading !== null || !searchKeyword.trim()}
+              className="w-full"
+              variant="secondary"
+            >
+              💡 搜索建议
+            </Button>
+            <Button
+              onClick={testHotSearch}
+              disabled={loading !== null}
+              className="w-full"
+              variant="secondary"
+            >
+              🔥 热门搜索
+            </Button>
+          </div>
+        </div>
+
+        {/* 歌曲功能测试 */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">🎵 歌曲功能测试</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button
+              onClick={testSongUrl}
+              disabled={loading !== null || !songId.trim()}
+              className="w-full"
+              variant="primary"
+            >
+              🎵 测试歌曲URL
+            </Button>
+            <Button
+              onClick={testSongDetail}
+              disabled={loading !== null || !songId.trim()}
+              className="w-full"
+              variant="primary"
+            >
+              📄 测试歌曲详情
+            </Button>
+          </div>
+        </div>
+
+        {/* 工具按钮 */}
+        <div className="flex justify-center">
+          <Button
+            onClick={clearResults}
+            disabled={loading !== null}
+            className="px-6"
+            variant="outline"
+          >
+            🗑️ 清除结果
+          </Button>
+        </div>
       </div>
 
       {/* 加载状态 */}
@@ -212,10 +281,10 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <h4 className="text-sm font-medium text-blue-800 mb-2">📊 API服务状态</h4>
           <div className="text-xs text-blue-700 space-y-1">
-            <div>• API服务器: http://8.134.196.44:8210</div>
-            <div>• 代理服务器: http://8.134.196.44:3001</div>
-            <div>• 超时设置: 15秒</div>
-            <div>• 重试次数: 2次</div>
+            <div>• 开发环境: 通过Vite代理 (/api → http://8.134.196.44:8210)</div>
+            <div>• 生产环境: 直接访问 http://8.134.196.44:8210</div>
+            <div>• 音频代理: http://8.134.196.44:3001</div>
+            <div>• 超时设置: 15秒 | 重试次数: 2次</div>
           </div>
         </div>
       </div>

@@ -3,8 +3,8 @@ import type { APIConfig } from './types';
 // 环境配置
 const IS_DEVELOPMENT = import.meta.env.DEV;
 const API_BASE_URL = IS_DEVELOPMENT 
-  ? 'http://8.134.196.44:8210'  // 开发环境：直接访问API服务器
-  : 'http://8.134.196.44:8210'; // 生产环境：同样使用API服务器
+  ? '/api'  // 开发环境：使用Vite代理
+  : 'http://8.134.196.44:8210'; // 生产环境：直接访问API服务器
 
 // NetEase Music API 配置
 export const API_CONFIG: APIConfig = {
