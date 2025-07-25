@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { SearchAPI } from '../../services/api/SearchAPI';
 import { SongAPI } from '../../services/api/SongAPI';
 import { SearchType } from '../../services/api/types';
-import { Button } from '../common/Button';
-import { Input } from '../common/Input';
-import { Loading } from '../common/Loading';
+import { Button, Input, Loading } from '../common';
 
 interface APITestPanelProps {
   className?: string;
