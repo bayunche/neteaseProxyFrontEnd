@@ -36,7 +36,21 @@ app.use(cors(corsOptions));
 
 // 请求日志中间件
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url} - ${req.ip}`);
+  const timestamp = new Date().toISOString();
+  const userAgent = req.headers['user-agent'] || 'Unknown';
+  const origin = req.headers.origin || 'Unknown';
+  
+  logger.info(`\n🚀 接收请求 [${timestamp}]`);
+  logger.info(`📋 ${req.method} ${req.url}`);
+  logger.info(`🌐 客户端IP: ${req.ip || req.connection.remoteAddress}`);
+  logger.info(`🔗 来源: ${origin}`);
+  logger.info(`🖥️  User-Agent: ${userAgent.substring(0, 100)}${userAgent.length > 100 ? '...' : ''}`);
+  
+  if (req.query.url) {
+    logger.info(`📎 代理目标: ${decodeURIComponent(req.query.url)}`);
+  }
+  
+  logger.info(`────────────────────────────────────────────────────────────────\n`);
   next();
 });
 
@@ -97,9 +111,59 @@ const createProxyHandler = (isImage = false) => {
       proxyReq.removeHeader('host');
       proxyReq.removeHeader('origin');
       
-      logger.info(`${isImage ? '图片' : '音频'}代理请求: ${req.query.url}`);
+      // 详细的请求信息打印
+      const originalUrl = req.query.url;
+      const targetUrl = `${proxyReq.protocol || 'http:'}//${proxyReq.host}${proxyReq.path}`;
+      
+      logger.info(`\n==================== ${isImage ? '图片' : '音频'}代理请求开始 ====================`);
+      logger.info(`🔗 原始URL: ${originalUrl}`);
+      logger.info(`🎯 目标URL: ${targetUrl}`);
+      logger.info(`📋 请求方法: ${proxyReq.method}`);
+      logger.info(`🏠 目标主机: ${proxyReq.host}`);
+      logger.info(`📂 目标路径: ${proxyReq.path}`);
+      logger.info(`🌐 客户端IP: ${req.ip || req.connection.remoteAddress}`);
+      logger.info(`🔧 请求头:`);
+      
+      // 打印重要的请求头
+      const importantHeaders = ['referer', 'user-agent', 'accept', 'accept-language', 'cache-control'];
+      importantHeaders.forEach(header => {
+        const value = proxyReq.getHeader(header);
+        if (value) {
+          logger.info(`     ${header}: ${value}`);
+        }
+      });
+      
+      logger.info(`===============================================================\n`);
     },
     onProxyRes: (proxyRes, req, res) => {
+      // 详细的响应信息打印
+      const originalUrl = req.query.url;
+      const targetUrl = `${req.protocol || 'http:'}://${proxyRes.req.host}${proxyRes.req.path}`;
+      
+      logger.info(`\n==================== ${isImage ? '图片' : '音频'}代理响应开始 ====================`);
+      logger.info(`🔗 原始URL: ${originalUrl}`);
+      logger.info(`🎯 目标URL: ${targetUrl}`);
+      logger.info(`📊 响应状态: ${proxyRes.statusCode} ${proxyRes.statusMessage || ''}`);
+      logger.info(`📦 内容类型: ${proxyRes.headers['content-type'] || 'unknown'}`);
+      logger.info(`📏 内容长度: ${proxyRes.headers['content-length'] || 'unknown'}`);
+      logger.info(`⏱️  响应时间: ${new Date().toISOString()}`);
+      
+      // 打印重要的响应头
+      logger.info(`🔧 重要响应头:`);
+      const importantResHeaders = ['content-type', 'content-length', 'cache-control', 'last-modified', 'etag', 'server'];
+      importantResHeaders.forEach(header => {
+        const value = proxyRes.headers[header];
+        if (value) {
+          logger.info(`     ${header}: ${value}`);
+        }
+      });
+      
+      // 如果是错误状态，打印更多信息
+      if (proxyRes.statusCode >= 400) {
+        logger.error(`❌ 错误状态码: ${proxyRes.statusCode}`);
+        logger.error(`❌ 所有响应头:`, JSON.stringify(proxyRes.headers, null, 2));
+      }
+      
       // 设置CORS响应头
       const origin = req.headers.origin;
       if (corsOptions.origin.some(allowedOrigin => {
@@ -119,16 +183,53 @@ const createProxyHandler = (isImage = false) => {
         proxyRes.headers['Cache-Control'] = 'public, max-age=3600'; // 缓存1小时
       }
       
-      logger.info(`${isImage ? '图片' : '音频'}代理响应: ${proxyRes.statusCode} - ${req.query.url}`);
+      logger.info(`✅ CORS头已设置完成`);
+      logger.info(`===============================================================\n`);
     },
     onError: (err, req, res) => {
-      logger.error(`${isImage ? '图片' : '音频'}代理错误:`, err.message, '- URL:', req.query.url);
+      const originalUrl = req.query.url;
+      
+      logger.error(`\n==================== ${isImage ? '图片' : '音频'}代理错误 ====================`);
+      logger.error(`🔗 原始URL: ${originalUrl}`);
+      logger.error(`❌ 错误类型: ${err.name || 'Unknown'}`);
+      logger.error(`❌ 错误消息: ${err.message}`);
+      logger.error(`❌ 错误代码: ${err.code || 'N/A'}`);
+      logger.error(`🌐 客户端IP: ${req.ip || req.connection.remoteAddress}`);
+      logger.error(`⏱️  错误时间: ${new Date().toISOString()}`);
+      
+      // 打印错误栈（仅在开发环境）
+      if (NODE_ENV === 'development' && err.stack) {
+        logger.error(`📚 错误堆栈:\n${err.stack}`);
+      }
+      
+      // 分析可能的错误原因
+      let errorReason = '未知错误';
+      if (err.code === 'ENOTFOUND') {
+        errorReason = 'DNS解析失败 - 目标域名不存在';
+      } else if (err.code === 'ECONNREFUSED') {
+        errorReason = '连接被拒绝 - 目标服务器拒绝连接';
+      } else if (err.code === 'ETIMEDOUT') {
+        errorReason = '连接超时 - 目标服务器响应超时';
+      } else if (err.code === 'ECONNRESET') {
+        errorReason = '连接重置 - 目标服务器主动断开连接';
+      } else if (err.message.includes('404')) {
+        errorReason = '资源不存在 - 目标URL对应的资源不存在';
+      } else if (err.message.includes('403')) {
+        errorReason = '访问被禁止 - 目标服务器拒绝访问';
+      } else if (err.message.includes('500')) {
+        errorReason = '目标服务器内部错误';
+      }
+      
+      logger.error(`🔍 错误分析: ${errorReason}`);
+      logger.error(`===============================================================\n`);
       
       if (!res.headersSent) {
         res.status(502).json({ 
           error: '代理服务器错误', 
           message: NODE_ENV === 'development' ? err.message : '服务暂时不可用',
-          url: req.query.url,
+          errorCode: err.code || 'UNKNOWN',
+          errorReason: errorReason,
+          url: originalUrl,
           timestamp: new Date().toISOString(),
           type: isImage ? 'image' : 'audio'
         });
@@ -238,11 +339,27 @@ app.use((err, req, res, next) => {
 
 // 启动服务器
 const server = app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🎵 音频代理服务器启动成功!`);
+  logger.info(`\n🎵 ========== 音频和图片代理服务器启动成功! ==========`);
   logger.info(`📡 服务地址: http://0.0.0.0:${PORT}`);
-  logger.info(`🔗 代理端点: http://0.0.0.0:${PORT}/audio-proxy?url=<音频URL>`);
+  logger.info(`🎧 音频代理: http://0.0.0.0:${PORT}/audio-proxy?url=<音频URL>`);
+  logger.info(`🖼️  图片代理: http://0.0.0.0:${PORT}/image-proxy?url=<图片URL>`);
   logger.info(`💚 健康检查: http://0.0.0.0:${PORT}/health`);
+  logger.info(`📊 服务信息: http://0.0.0.0:${PORT}/info`);
   logger.info(`🌍 运行环境: ${NODE_ENV}`);
+  logger.info(`⏰ 启动时间: ${new Date().toISOString()}`);
+  logger.info(`📝 日志级别: 详细模式（包含请求/响应详情）`);
+  logger.info(`=================================================\n`);
+  
+  // 打印支持的CORS来源
+  logger.info(`🔒 CORS配置:`);
+  if (Array.isArray(corsOptions.origin)) {
+    corsOptions.origin.forEach((origin, index) => {
+      logger.info(`   ${index + 1}. ${origin}`);
+    });
+  } else {
+    logger.info(`   允许所有来源: ${corsOptions.origin}`);
+  }
+  logger.info(`\n🚀 服务器已就绪，等待请求...\n`);
 });
 
 // 优雅关闭
