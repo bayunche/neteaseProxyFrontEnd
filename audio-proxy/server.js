@@ -62,34 +62,50 @@ const createProxyHandler = (isImage = false) => {
     secure: false,
     timeout: 30000, // 30秒超时
     proxyTimeout: 30000,
+    followRedirects: true,
     router: (req) => {
       const originalUrl = req.query.url;
+      logger.info(`\n🔍 Router调试 - ${isImage ? '图片' : '音频'}代理:`);
+      logger.info(`   请求路径: ${req.url}`);
+      logger.info(`   查询参数: ${JSON.stringify(req.query)}`);
+      logger.info(`   原始URL: ${originalUrl}`);
+      
       if (originalUrl) {
         try {
           const url = new URL(originalUrl);
           const target = `${url.protocol}//${url.host}`;
-          logger.info(`${isImage ? '图片' : '音频'}代理目标: ${target}`);
+          logger.info(`   解析目标: ${target}`);
+          logger.info(`   URL组件: 协议=${url.protocol}, 主机=${url.host}, 端口=${url.port || '默认'}`);
           return target;
         } catch (error) {
-          logger.error('Invalid URL in router:', originalUrl, error.message);
+          logger.error(`   ❌ URL解析错误: ${originalUrl} - ${error.message}`);
           return 'http://localhost:3001';
         }
       }
+      logger.warn(`   ⚠️  没有URL参数，使用默认目标`);
       return 'http://localhost:3001';
     },
     pathRewrite: (path, req) => {
       const originalUrl = req.query.url;
+      logger.info(`\n🔄 PathRewrite调试 - ${isImage ? '图片' : '音频'}代理:`);
+      logger.info(`   输入路径: ${path}`);
+      logger.info(`   请求URL: ${req.url}`);
+      logger.info(`   查询中的URL: ${originalUrl}`);
+      
       if (originalUrl) {
         try {
           const url = new URL(originalUrl);
           const newPath = url.pathname + url.search;
-          logger.info(`路径重写: ${path} -> ${newPath}`);
+          logger.info(`   目标路径: ${newPath}`);
+          logger.info(`   路径组件: pathname=${url.pathname}, search=${url.search}`);
+          logger.info(`   ✅ 路径重写成功: ${path} -> ${newPath}`);
           return newPath;
         } catch (error) {
-          logger.error('Invalid URL for path rewrite:', originalUrl, error.message);
+          logger.error(`   ❌ URL解析失败: ${originalUrl} - ${error.message}`);
           return '/';
         }
       }
+      logger.warn(`   ⚠️  路径重写失败: 没有找到url参数, 使用默认路径 /`);
       return '/';
     },
     onProxyReq: (proxyReq, req, res) => {

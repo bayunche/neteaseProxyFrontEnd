@@ -5,7 +5,7 @@
  * 用于测试和验证详细日志输出功能
  */
 
-const http = require('http');
+import http from 'http';
 
 // 测试URL配置
 const TEST_URLS = {
