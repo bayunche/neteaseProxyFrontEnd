@@ -39,7 +39,7 @@ export class SearchAPI {
 
     try {
       const response = await neteaseAPI.get<any>(API_ENDPOINTS.SEARCH, {
-        keywords: keywords.trim(),
+        value: keywords.trim(),
         type,
         limit,
         offset

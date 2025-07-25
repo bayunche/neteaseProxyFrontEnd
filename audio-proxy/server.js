@@ -17,6 +17,10 @@ const logger = {
 const corsOptions = {
   origin: NODE_ENV === 'production' 
     ? [
+        'http://localhost:5173',             // 开发环境域名
+        'http://localhost:5174', 
+        'http://localhost:5175',
+        /^http:\/\/localhost:\d+$/,          // 本地开发端口
         /^https:\/\/.*\.your-domain\.com$/,  // 替换为你的域名
         'https://your-domain.com'            // 替换为你的域名
       ]
