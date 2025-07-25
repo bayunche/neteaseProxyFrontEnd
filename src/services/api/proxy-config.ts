@@ -1,12 +1,12 @@
 /**
- * 音频代理配置
- * 支持本地开发和生产环境的代理切换
+ * 音频和图片代理配置
+ * 统一使用公网代理服务器解决CORS问题
  */
 
 // 代理服务器配置
 export const PROXY_CONFIG = {
-  // 本地开发环境代理
-  LOCAL: import.meta.env.VITE_AUDIO_PROXY_LOCAL || 'http://localhost:3001',
+  // 开发环境代理（统一使用公网服务器）
+  LOCAL: import.meta.env.VITE_AUDIO_PROXY_LOCAL || 'http://8.134.196.44:3001',
   
   // 生产环境代理（公网服务器地址）
   PRODUCTION: import.meta.env.VITE_AUDIO_PROXY_PRODUCTION || 'http://8.134.196.44:3001',
@@ -18,9 +18,10 @@ export const PROXY_CONFIG = {
 
 /**
  * 获取当前环境的代理服务器地址
+ * 注意：开发和生产环境都使用同一个公网代理服务器
  */
 export function getProxyBaseUrl(): string {
-  // 检测环境
+  // 检测环境（虽然两个环境都使用同一个服务器）
   const isDevelopment = import.meta.env.DEV || 
                        window.location.hostname === 'localhost' ||
                        window.location.hostname === '127.0.0.1' ||
