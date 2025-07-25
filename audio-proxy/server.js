@@ -123,7 +123,13 @@ const createProxyHandler = (isImage = false) => {
       proxyReq.setHeader('Cache-Control', 'no-cache');
       proxyReq.setHeader('Pragma', 'no-cache');
       
-      // 移除可能引起问题的请求头
+      // 保持Range头用于音频流
+      if (!isImage && req.headers.range) {
+        proxyReq.setHeader('Range', req.headers.range);
+        logger.info(`🎵 传递Range请求头: ${req.headers.range}`);
+      }
+      
+      // 移除可能引起问题的请求头，但保留Range
       proxyReq.removeHeader('host');
       proxyReq.removeHeader('origin');
       
@@ -180,26 +186,49 @@ const createProxyHandler = (isImage = false) => {
         logger.error(`❌ 所有响应头:`, JSON.stringify(proxyRes.headers, null, 2));
       }
       
-      // 设置CORS响应头
+      // 设置CORS响应头 - 修复版本
       const origin = req.headers.origin;
-      if (corsOptions.origin.some(allowedOrigin => {
-        if (typeof allowedOrigin === 'string') return allowedOrigin === origin;
-        if (allowedOrigin instanceof RegExp) return allowedOrigin.test(origin);
-        return false;
-      })) {
-        proxyRes.headers['Access-Control-Allow-Origin'] = origin;
+      logger.info(`🔒 CORS处理: 请求来源=${origin}`);
+      
+      // 检查来源是否被允许
+      let originAllowed = false;
+      if (Array.isArray(corsOptions.origin)) {
+        originAllowed = corsOptions.origin.some(allowedOrigin => {
+          if (typeof allowedOrigin === 'string') return allowedOrigin === origin;
+          if (allowedOrigin instanceof RegExp) return allowedOrigin.test(origin);
+          return false;
+        });
+      } else if (corsOptions.origin === true || corsOptions.origin === '*') {
+        originAllowed = true;
       }
       
-      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
-      proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
-      proxyRes.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization';
+      if (originAllowed || !origin) {
+        proxyRes.headers['Access-Control-Allow-Origin'] = origin || '*';
+        logger.info(`✅ CORS允许来源: ${origin || '*'}`);
+      } else {
+        logger.warn(`⚠️  CORS拒绝来源: ${origin}`);
+      }
       
-      // 设置缓存头
-      if (proxyRes.statusCode === 200) {
+      // 设置必要的CORS头
+      proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+      proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS, POST';
+      proxyRes.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Range';
+      
+      // 音频流需要的特殊头
+      if (!isImage) {
+        proxyRes.headers['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges';
+      }
+      
+      // 设置缓存头 - 支持206状态码
+      if (proxyRes.statusCode === 200 || proxyRes.statusCode === 206) {
         proxyRes.headers['Cache-Control'] = 'public, max-age=3600'; // 缓存1小时
       }
       
-      logger.info(`✅ CORS头已设置完成`);
+      logger.info(`✅ CORS头设置完成 - 状态码: ${proxyRes.statusCode}`);
+      logger.info(`🔧 设置的CORS头:`);
+      logger.info(`     Access-Control-Allow-Origin: ${proxyRes.headers['Access-Control-Allow-Origin']}`);
+      logger.info(`     Access-Control-Allow-Methods: ${proxyRes.headers['Access-Control-Allow-Methods']}`);
+      logger.info(`     Access-Control-Expose-Headers: ${proxyRes.headers['Access-Control-Expose-Headers'] || 'none'}`);
       logger.info(`===============================================================\n`);
     },
     onError: (err, req, res) => {
@@ -260,6 +289,41 @@ const audioProxy = createProxyHandler(false);
 // 图片代理中间件
 const imageProxy = createProxyHandler(true);
 
+// OPTIONS请求处理中间件
+const handleOptions = (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin;
+    logger.info(`🔒 处理OPTIONS预检请求，来源: ${origin}`);
+    
+    // 检查来源是否被允许
+    let originAllowed = false;
+    if (Array.isArray(corsOptions.origin)) {
+      originAllowed = corsOptions.origin.some(allowedOrigin => {
+        if (typeof allowedOrigin === 'string') return allowedOrigin === origin;
+        if (allowedOrigin instanceof RegExp) return allowedOrigin.test(origin);
+        return false;
+      });
+    } else if (corsOptions.origin === true || corsOptions.origin === '*') {
+      originAllowed = true;
+    }
+    
+    if (originAllowed || !origin) {
+      res.header('Access-Control-Allow-Origin', origin || '*');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS, POST');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Range');
+      res.header('Access-Control-Max-Age', '86400'); // 24小时
+      
+      logger.info(`✅ OPTIONS请求处理完成`);
+      return res.status(204).end();
+    } else {
+      logger.warn(`⚠️  OPTIONS请求被拒绝，来源: ${origin}`);
+      return res.status(403).json({ error: 'CORS request denied' });
+    }
+  }
+  next();
+};
+
 // 通用代理验证中间件
 const validateProxyRequest = (req, res, next) => {
   // 验证URL参数
@@ -286,10 +350,10 @@ const validateProxyRequest = (req, res, next) => {
 };
 
 // 音频代理路由
-app.use('/audio-proxy', validateProxyRequest, audioProxy);
+app.use('/audio-proxy', handleOptions, validateProxyRequest, audioProxy);
 
 // 图片代理路由（使用专门的图片代理中间件）
-app.use('/image-proxy', validateProxyRequest, imageProxy);
+app.use('/image-proxy', handleOptions, validateProxyRequest, imageProxy);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
