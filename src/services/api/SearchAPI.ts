@@ -1,5 +1,6 @@
 import { neteaseAPI } from './NetEaseAPI';
 import { API_ENDPOINTS } from './config';
+import { getImageProxyUrl } from './proxy-config';
 import type { 
   SearchRequest, 
   SearchResult, 
@@ -277,7 +278,7 @@ export class SearchAPI {
       artists: rawSong.artists?.map((artist: any) => this.formatArtist(artist)) || [],
       album: this.formatAlbum(rawSong.album),
       duration: rawSong.duration || 0,
-      picUrl: rawSong.album?.picUrl || `https://p1.music.126.net/${rawSong.album?.picId}/${rawSong.album?.picId}.jpg`,
+      picUrl: this.formatImageUrl(rawSong.album?.picUrl || `https://p1.music.126.net/${rawSong.album?.picId}/${rawSong.album?.picId}.jpg`),
       fee: rawSong.fee,
       mvid: rawSong.mvid,
       source: 'api'
@@ -291,10 +292,18 @@ export class SearchAPI {
     return {
       id: rawAlbum.id || 0,
       name: rawAlbum.name || '',
-      picUrl: rawAlbum.picUrl || `https://p1.music.126.net/${rawAlbum.picId}/${rawAlbum.picId}.jpg`,
+      picUrl: this.formatImageUrl(rawAlbum.picUrl || `https://p1.music.126.net/${rawAlbum.picId}/${rawAlbum.picId}.jpg`),
       artist: rawAlbum.artist ? this.formatArtist(rawAlbum.artist) : undefined,
       publishTime: rawAlbum.publishTime
     };
+  }
+
+  /**
+   * 格式化图片URL，通过代理服务器
+   */
+  private static formatImageUrl(imageUrl: string): string {
+    if (!imageUrl) return imageUrl;
+    return getImageProxyUrl(imageUrl);
   }
 
   /**
@@ -304,7 +313,7 @@ export class SearchAPI {
     return {
       id: rawArtist.id || 0,
       name: rawArtist.name || '',
-      picUrl: rawArtist.picUrl || rawArtist.img1v1Url || '',
+      picUrl: this.formatImageUrl(rawArtist.picUrl || rawArtist.img1v1Url || ''),
       alias: rawArtist.alias || []
     };
   }
@@ -316,12 +325,12 @@ export class SearchAPI {
     return {
       id: rawPlaylist.id,
       name: rawPlaylist.name,
-      coverImgUrl: rawPlaylist.coverImgUrl,
+      coverImgUrl: this.formatImageUrl(rawPlaylist.coverImgUrl),
       description: rawPlaylist.description,
       creator: rawPlaylist.creator ? {
         userId: rawPlaylist.creator.userId,
         nickname: rawPlaylist.creator.nickname,
-        avatarUrl: rawPlaylist.creator.avatarUrl
+        avatarUrl: this.formatImageUrl(rawPlaylist.creator.avatarUrl)
       } : undefined,
       trackCount: rawPlaylist.trackCount,
       playCount: rawPlaylist.playCount
