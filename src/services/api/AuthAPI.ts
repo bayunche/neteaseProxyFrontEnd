@@ -3,9 +3,13 @@ import { APIError } from './types';
 import type {
   User,
   APIResponse,
-  APIErrorType
+  APIErrorType,
+  UserStatus,
+  UserPlaylistRequest,
+  UserPlaylistResponse
 } from './types';
 import { logger } from './utils';
+import { API_ENDPOINTS } from './config';
 
 /**
  * 手机验证码登录相关类型
@@ -301,10 +305,133 @@ export class AuthAPI {
       return false;
     }
 
-    // 这里可以添加验证登录状态是否有效的逻辑
-    // 例如调用用户信息接口验证token是否有效
+    // 验证登录状态是否有效
+    try {
+      await this.getUserStatus();
+      return true;
+    } catch (error) {
+      logger.warn('自动登录验证失败，清理认证状态', error);
+      this.clearAuthState();
+      return false;
+    }
+  }
 
-    return true;
+  /**
+   * 获取用户登录详细信息
+   * 说明: 获取用户登录详细信息（需登录）
+   * 此接口是将html提取为json格式，速度可能会比其他接口慢一点
+   */
+  static async getUserStatus(): Promise<UserStatus> {
+    if (!this.isLoggedIn()) {
+      throw new APIError(
+        APIErrorType.UNAUTHORIZED, 
+        '用户未登录，无法获取用户状态信息'
+      );
+    }
+
+    logger.info('获取用户登录详细信息');
+
+    try {
+      const response = await neteaseAPI.get<UserStatus>(API_ENDPOINTS.USER_STATUS);
+      
+      if (response.code === 200 && response.data) {
+        // 更新当前用户信息
+        if (response.data.profile) {
+          this.currentUser = response.data.profile;
+          this.saveAuthState();
+        }
+        
+        logger.info('获取用户状态信息成功', response.data.profile?.nickname);
+        return response;
+      } else {
+        throw new APIError(
+          APIErrorType.SERVER_ERROR,
+          response.message || '获取用户状态信息失败'
+        );
+      }
+    } catch (error) {
+      logger.error('获取用户状态信息失败', error);
+      
+      if (error instanceof APIError) {
+        throw error;
+      }
+      
+      throw new APIError(
+        APIErrorType.NETWORK_ERROR,
+        '获取用户状态信息网络错误'
+      );
+    }
+  }
+
+  /**
+   * 获取指定用户的歌单列表
+   * @param uid 用户id（必选）
+   * @param limit 返回数量，默认为30（可选）
+   * @param offset 偏移数量，用于分页，默认为0（可选）
+   */
+  static async getUserPlaylist(request: UserPlaylistRequest): Promise<UserPlaylistResponse> {
+    const { uid, limit = 30, offset = 0 } = request;
+    
+    if (!uid) {
+      throw new APIError(
+        APIErrorType.VALIDATION_ERROR,
+        '用户ID不能为空'
+      );
+    }
+
+    logger.info(`获取用户歌单列表: uid=${uid}, limit=${limit}, offset=${offset}`);
+
+    try {
+      const response = await neteaseAPI.get<UserPlaylistResponse>(
+        API_ENDPOINTS.USER_PLAYLIST,
+        {
+          uid: String(uid),
+          limit,
+          offset
+        }
+      );
+      
+      if (response.code === 200) {
+        logger.info(`获取用户歌单列表成功: 共${response.playlist?.length || 0}个歌单`);
+        return response;
+      } else {
+        throw new APIError(
+          APIErrorType.SERVER_ERROR,
+          response.message || '获取用户歌单列表失败'
+        );
+      }
+    } catch (error) {
+      logger.error('获取用户歌单列表失败', error);
+      
+      if (error instanceof APIError) {
+        throw error;
+      }
+      
+      throw new APIError(
+        APIErrorType.NETWORK_ERROR,
+        '获取用户歌单列表网络错误'
+      );
+    }
+  }
+
+  /**
+   * 获取当前登录用户的歌单列表
+   * @param limit 返回数量，默认为30
+   * @param offset 偏移数量，用于分页，默认为0
+   */
+  static async getCurrentUserPlaylist(limit: number = 30, offset: number = 0): Promise<UserPlaylistResponse> {
+    if (!this.isLoggedIn() || !this.currentUser) {
+      throw new APIError(
+        APIErrorType.UNAUTHORIZED,
+        '用户未登录，无法获取歌单列表'
+      );
+    }
+
+    return this.getUserPlaylist({
+      uid: this.currentUser.userId,
+      limit,
+      offset
+    });
   }
 }
 

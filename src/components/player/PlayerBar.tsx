@@ -9,7 +9,8 @@ import {
   Shuffle,
   Repeat,
   Repeat1,
-  List
+  List,
+  Type
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
@@ -27,7 +28,8 @@ const PlayerBar: React.FC = () => {
     setVolume, 
     toggleMute,
     setPlayMode,
-    toggleQueue
+    toggleQueue,
+    toggleLyrics
   } = usePlayerStore();
   
   const { 
@@ -40,7 +42,7 @@ const PlayerBar: React.FC = () => {
     playMode 
   } = player;
   
-  const { showQueue } = ui;
+  const { showQueue, showLyrics } = ui;
 
   const handlePlayPause = () => {
     if (isPlaying) {
@@ -151,6 +153,17 @@ const PlayerBar: React.FC = () => {
               disabled={!currentSong}
             >
               <SkipForward className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={toggleLyrics}
+              className={cn(
+                'p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors',
+                showLyrics && 'bg-gray-100 dark:bg-gray-800'
+              )}
+              title="歌词显示"
+            >
+              <Type className="w-4 h-4" />
             </button>
             
             <button

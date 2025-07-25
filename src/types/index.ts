@@ -47,6 +47,8 @@ export interface Playlist {
   isPublic: boolean;
   createdAt: Date;
   updatedAt: Date;
+  trackCount?: number;  // 歌曲数量
+  playCount?: number;   // 播放次数
 }
 
 // Constants (instead of enums to avoid TypeScript issues)

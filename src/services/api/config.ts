@@ -9,7 +9,7 @@ const API_BASE_URL = IS_DEVELOPMENT
 // NetEase Music API 配置
 export const API_CONFIG: APIConfig = {
   baseURL: API_BASE_URL,
-  timeout: 15000, // 15秒超时（网络请求可能较慢）
+  timeout: 30000, // 30秒超时（歌单详情数据量大时需要更长时间）
   retryCount: 2, // 减少重试次数避免过长等待
   retryDelay: 1000 // 1秒重试延迟
 };
@@ -43,7 +43,7 @@ export const API_ENDPOINTS = {
   // 歌曲相关
   SONG_URL: '/song/url',
   SONG_DETAIL: '/song/detail',
-  SONG_LYRIC: '/lyric',
+  SONG_LYRIC: '/song/lyric',
   
   // 用户和认证相关
   LOGIN_CELLPHONE: '/login/cellphone',
@@ -51,6 +51,8 @@ export const API_ENDPOINTS = {
   LOGOUT: '/logout',
   LOGIN_STATUS: '/login/status',
   LOGIN_REFRESH: '/login/refresh',
+  USER_STATUS: '/user/status',
+  USER_PLAYLIST: '/user/playlist',
   
   // 专辑相关
   ALBUM: '/album',

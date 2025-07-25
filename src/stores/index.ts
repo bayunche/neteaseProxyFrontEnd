@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Song, Playlist, PlaybackState, UserSettings } from '../types';
+import type { Song, Playlist, PlaybackState, UserSettings, Lyrics } from '../types';
 import { PlayMode } from '../types';
 import { audioService } from '../services/audio';
-import { SearchAPI, SearchType, AuthAPI, type User, type SearchResult as APISearchResult } from '../services/api';
+import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult } from '../services/api';
 
 // Extended search result with pagination info
 interface ExtendedSearchResult extends APISearchResult {
@@ -58,6 +58,14 @@ interface AppState {
     showQueue: boolean;
   };
   
+  // Lyrics state
+  lyrics: {
+    current: Lyrics | null;
+    currentLineIndex: number;
+    isLoading: boolean;
+    error: string | null;
+  };
+  
   // Search state
   search: {
     keyword: string;
@@ -91,6 +99,7 @@ interface AppActions {
   clearQueue: () => void;
   shuffleQueue: () => void;
   moveInQueue: (fromIndex: number, toIndex: number) => void;
+  playAllSongs: (songs: Song[]) => Promise<void>;
   
   // User data actions
   addToFavorites: (song: Song) => void;
@@ -100,12 +109,15 @@ interface AppActions {
   addToPlaylist: (playlistId: string, song: Song) => void;
   removeFromPlaylist: (playlistId: string, songId: string) => void;
   updateUserSettings: (settings: Partial<UserSettings>) => void;
+  loadPlaylistDetail: (playlistId: string) => Promise<Playlist | null>;
   
   // Auth actions
   sendVerificationCode: (phone: string) => Promise<void>;
   loginWithCode: (phone: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   checkLoginStatus: () => Promise<boolean>;
+  loadUserPlaylists: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
   
   // Search actions
   performSearch: (keyword: string, type?: string) => Promise<void>;
@@ -121,6 +133,11 @@ interface AppActions {
   toggleLyrics: () => void;
   toggleVisualizer: () => void;
   toggleQueue: () => void;
+  
+  // Lyrics actions
+  loadLyrics: (songId: string) => Promise<void>;
+  updateCurrentLyricLine: (currentTime: number) => void;
+  clearLyrics: () => void;
 }
 
 // Initial state
@@ -167,6 +184,13 @@ const initialState: AppState = {
     showLyrics: false,
     showVisualizer: false,
     showQueue: false,
+  },
+  
+  lyrics: {
+    current: null,
+    currentLineIndex: -1,
+    isLoading: false,
+    error: null,
   },
   search: {
     keyword: '',
@@ -235,6 +259,9 @@ export const usePlayerStore = create<AppState & AppActions>()(
             
             // 播放歌曲
             await audioService.playSong(targetSong);
+            
+            // 自动加载歌词
+            get().loadLyrics(String(targetSong.id));
             
             // 更新最近播放
             set((state) => ({
@@ -399,6 +426,30 @@ export const usePlayerStore = create<AppState & AppActions>()(
             };
           });
         },
+
+        // 播放所有歌曲（清空队列并播放歌曲列表）
+        playAllSongs: async (songs: Song[]) => {
+          if (!songs || songs.length === 0) {
+            return;
+          }
+
+          try {
+            // 清空当前队列
+            get().clearQueue();
+            
+            // 播放第一首歌曲
+            await get().play(songs[0]);
+            
+            // 将剩余歌曲添加到队列
+            songs.slice(1).forEach(song => {
+              get().addToQueue(song);
+            });
+
+            logger.info(`开始播放歌曲列表: ${songs.length}首歌曲`);
+          } catch (error) {
+            logger.error('播放歌曲列表失败:', error);
+          }
+        },
         
         // User data actions
         addToFavorites: (song: Song) => {
@@ -495,6 +546,35 @@ export const usePlayerStore = create<AppState & AppActions>()(
           }));
         },
 
+        // 加载歌单详情
+        loadPlaylistDetail: async (playlistId: string): Promise<Playlist | null> => {
+          if (!playlistId) {
+            logger.warn('歌单ID不能为空');
+            return null;
+          }
+
+          try {
+            logger.info(`开始加载歌单详情: ${playlistId}`);
+            const playlist = await PlaylistAPI.getPlaylistDetail({ id: playlistId });
+            
+            // 更新store中的歌单信息（如果存在）
+            set((state) => ({
+              user: {
+                ...state.user,
+                playlists: state.user.playlists.map(p => 
+                  p.id === playlistId ? { ...p, ...playlist } : p
+                )
+              }
+            }));
+
+            logger.info(`加载歌单详情成功: "${playlist.title}", ${playlist.songs.length}首歌曲`);
+            return playlist;
+          } catch (error) {
+            logger.error('加载歌单详情失败', error);
+            return null;
+          }
+        },
+
         // Auth actions implementation
         sendVerificationCode: async (phone: string) => {
           try {
@@ -520,6 +600,9 @@ export const usePlayerStore = create<AppState & AppActions>()(
             }));
 
             console.log('登录成功:', loginResult.profile?.nickname);
+            
+            // 登录成功后自动加载用户数据
+            get().refreshUserData();
           } catch (error) {
             console.error('登录失败:', error);
             throw error;
@@ -535,7 +618,10 @@ export const usePlayerStore = create<AppState & AppActions>()(
                 ...state.user,
                 isLoggedIn: false,
                 profile: null,
-                token: null
+                token: null,
+                playlists: [], // 清空歌单
+                favorites: [], // 清空收藏
+                recentPlayed: [] // 清空最近播放
               }
             }));
 
@@ -560,6 +646,9 @@ export const usePlayerStore = create<AppState & AppActions>()(
                   token: token
                 }
               }));
+              
+              // 自动加载用户数据
+              get().refreshUserData();
               return true;
             } else {
               set((state) => ({
@@ -575,6 +664,78 @@ export const usePlayerStore = create<AppState & AppActions>()(
           } catch (error) {
             console.error('检查登录状态失败:', error);
             return false;
+          }
+        },
+
+        // 加载用户歌单
+        loadUserPlaylists: async () => {
+          const state = get();
+          if (!state.user.isLoggedIn || !state.user.profile) {
+            console.warn('用户未登录，无法加载歌单');
+            return;
+          }
+
+          try {
+            console.log('开始加载用户歌单...');
+            const playlistResponse = await AuthAPI.getCurrentUserPlaylist(50, 0);
+            
+            if (playlistResponse.playlist) {
+              // 转换API数据格式为本地Playlist格式
+              const playlists: Playlist[] = playlistResponse.playlist.map(apiPlaylist => ({
+                id: String(apiPlaylist.id),
+                title: apiPlaylist.name,
+                description: apiPlaylist.description || '',
+                coverUrl: apiPlaylist.coverImgUrl || '',
+                creator: apiPlaylist.creator?.nickname || '未知',
+                songs: [], // 初始为空，点击时再加载
+                isPublic: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                trackCount: apiPlaylist.trackCount || 0,
+                playCount: apiPlaylist.playCount || 0
+              }));
+
+              set((state) => ({
+                user: {
+                  ...state.user,
+                  playlists
+                }
+              }));
+
+              console.log(`加载用户歌单成功: ${playlists.length}个歌单`);
+            }
+          } catch (error) {
+            console.error('加载用户歌单失败:', error);
+          }
+        },
+
+        // 刷新用户数据
+        refreshUserData: async () => {
+          const state = get();
+          if (!state.user.isLoggedIn) {
+            return;
+          }
+
+          try {
+            // 并行获取用户状态和歌单
+            const [userStatus] = await Promise.allSettled([
+              AuthAPI.getUserStatus(),
+              get().loadUserPlaylists()
+            ]);
+
+            // 更新用户详细信息
+            if (userStatus.status === 'fulfilled' && userStatus.value.data?.profile) {
+              set((state) => ({
+                user: {
+                  ...state.user,
+                  profile: userStatus.value.data.profile
+                }
+              }));
+            }
+
+            console.log('用户数据刷新完成');
+          } catch (error) {
+            console.error('刷新用户数据失败:', error);
           }
         },
         
@@ -773,6 +934,87 @@ export const usePlayerStore = create<AppState & AppActions>()(
             ui: {
               ...state.ui,
               showQueue: !state.ui.showQueue
+            }
+          }));
+        },
+        
+        // Lyrics actions implementation
+        loadLyrics: async (songId: string) => {
+          if (!songId) {
+            return;
+          }
+
+          set((state) => ({
+            lyrics: {
+              ...state.lyrics,
+              isLoading: true,
+              error: null
+            }
+          }));
+
+          try {
+            logger.info(`开始加载歌词: ${songId}`);
+            const lyrics = await LyricAPI.getLyric({ id: songId });
+
+            set((state) => ({
+              lyrics: {
+                ...state.lyrics,
+                current: lyrics,
+                currentLineIndex: -1,
+                isLoading: false,
+                error: null
+              }
+            }));
+
+            if (lyrics) {
+              logger.info(`歌词加载成功: ${lyrics.lines.length}行`);
+            } else {
+              logger.info('当前歌曲无歌词');
+            }
+          } catch (error) {
+            logger.error('歌词加载失败:', error);
+            
+            set((state) => ({
+              lyrics: {
+                ...state.lyrics,
+                current: null,
+                currentLineIndex: -1,
+                isLoading: false,
+                error: error instanceof Error ? error.message : '歌词加载失败'
+              }
+            }));
+          }
+        },
+
+        updateCurrentLyricLine: (currentTime: number) => {
+          const state = get();
+          
+          if (!state.lyrics.current || !state.lyrics.current.lines.length) {
+            return;
+          }
+
+          const currentLineIndex = LyricAPI.getCurrentLyricLine(
+            state.lyrics.current, 
+            currentTime * 1000 // 转换为毫秒
+          );
+
+          if (currentLineIndex !== state.lyrics.currentLineIndex) {
+            set((state) => ({
+              lyrics: {
+                ...state.lyrics,
+                currentLineIndex
+              }
+            }));
+          }
+        },
+
+        clearLyrics: () => {
+          set((state) => ({
+            lyrics: {
+              ...state.lyrics,
+              current: null,
+              currentLineIndex: -1,
+              error: null
             }
           }));
         },

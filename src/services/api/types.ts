@@ -160,6 +160,178 @@ export interface LoginResponse extends APIResponse {
   cookie: string;
 }
 
+// 用户详细状态信息
+export interface UserStatus {
+  data: {
+    profile: User;
+    level: number;
+    mobileSign: boolean;
+    pcSign: boolean;
+    profile: {
+      userId: number;
+      userType: number;
+      nickname: string;
+      avatarImgId: number;
+      avatarUrl: string;
+      backgroundImgId: number;
+      backgroundUrl: string;
+      signature: string;
+      createTime: number;
+      userName: string;
+      accountType: number;
+      shortUserName: string;
+      birthday: number;
+      authority: number;
+      gender: number;
+      accountStatus: number;
+      province: number;
+      city: number;
+      authStatus: number;
+      description: string;
+      detailDescription: string;
+      defaultAvatar: boolean;
+      expertTags: any[];
+      experts: any[];
+      djStatus: number;
+      locationStatus: number;
+      vipType: number;
+      followed: boolean;
+      mutual: boolean;
+      authenticated: boolean;
+      lastLoginTime: number;
+      lastLoginIP: string;
+      remarkName: string;
+      viptypeVersion: number;
+      authenticationTypes: number;
+      avatarDetail: any;
+      anchor: boolean;
+    };
+  };
+}
+
+// 用户歌单列表请求参数
+export interface UserPlaylistRequest {
+  uid: number | string;
+  limit?: number;
+  offset?: number;
+}
+
+// 用户歌单列表响应
+export interface UserPlaylistResponse extends APIResponse {
+  version: string;
+  more: boolean;
+  playlist: Playlist[];
+}
+
+// 歌单详情请求参数
+export interface PlaylistDetailRequest {
+  id: number | string;
+  s?: number; // 最近的收藏者数量,默认为10
+}
+
+// 歌单详情响应
+export interface PlaylistDetailResponse extends APIResponse {
+  playlist: {
+    id: number;
+    name: string;
+    coverImgId: number;
+    coverImgUrl: string;
+    coverImgId_str: string;
+    adType: number;
+    userId: number;
+    createTime: number;
+    status: number;
+    opRecommend: boolean;
+    highQuality: boolean;
+    newImported: boolean;
+    updateTime: number;
+    trackCount: number;
+    specialType: number;
+    privacy: number;
+    trackUpdateTime: number;
+    commentThreadId: string;
+    playCount: number;
+    trackNumberUpdateTime: number;
+    subscribedCount: number;
+    cloudTrackCount: number;
+    ordered: boolean;
+    description: string;
+    tags: string[];
+    updateFrequency: string;
+    backgroundCoverId: number;
+    backgroundCoverUrl: string;
+    titleImage: number;
+    titleImageUrl: string;
+    englishTitle: string;
+    officialPlaylistType: string;
+    copied: boolean;
+    relateResType: string;
+    subscribers: any[];
+    subscribed: boolean;
+    creator: {
+      defaultAvatar: boolean;
+      province: number;
+      authStatus: number;
+      followed: boolean;
+      avatarUrl: string;
+      accountStatus: number;
+      gender: number;
+      city: number;
+      birthday: number;
+      userId: number;
+      userType: number;
+      nickname: string;
+      signature: string;
+      description: string;
+      detailDescription: string;
+      avatarImgId: number;
+      backgroundImgId: number;
+      backgroundUrl: string;
+      authority: number;
+      mutual: boolean;
+      expertTags: any[];
+      experts: any[];
+      djStatus: number;
+      vipType: number;
+      remarkName: string;
+      authenticationTypes: number;
+      avatarDetail: any;
+      avatarImgIdStr: string;
+      backgroundImgIdStr: string;
+      anchor: boolean;
+      avatarImgId_str: string;
+    };
+    tracks: any[]; // 歌曲列表，可能为空（超过1000首时）
+    videoIds: any[];
+    videos: any[];
+    trackIds: Array<{
+      id: number;
+      v: number;
+      t: number;
+      at: number;
+      alg: string;
+      uid: number;
+      rcmdReason: string;
+      sc: any;
+      f: any;
+      sr: any;
+    }>;
+    shareCount: number;
+    commentCount: number;
+    remixVideo: any;
+    sharedUsers: any[];
+    historySharedUsers: any[];
+    gradeStatus: string;
+    score: any;
+    algTags: any[];
+    trialMode: number;
+    displayTags: any[];
+    platFormAlgTags: any[];
+    upateTime: number;
+  };
+  privileges: any[];
+}
+
 // 歌曲详情相关类型
 export interface SongDetailRequest {
   ids: number[] | string;
@@ -168,6 +340,38 @@ export interface SongDetailRequest {
 export interface SongDetailResponse extends APIResponse {
   songs: Song[];
   privileges: any[];
+}
+
+// 歌词相关类型
+export interface LyricRequest {
+  id: number | string;
+}
+
+export interface LyricLine {
+  time: number;
+  text: string;
+}
+
+export interface LyricResponse extends APIResponse {
+  sgc: boolean;
+  sfy: boolean;
+  qfy: boolean;
+  lrc?: {
+    version: number;
+    lyric: string;
+  };
+  klyric?: {
+    version: number;
+    lyric: string;
+  };
+  tlyric?: {
+    version: number;
+    lyric: string;
+  };
+  romalrc?: {
+    version: number;
+    lyric: string;
+  };
 }
 
 // API错误类型

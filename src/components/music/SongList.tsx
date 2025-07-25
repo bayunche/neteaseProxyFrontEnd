@@ -162,7 +162,7 @@ const SongList: React.FC<SongListProps> = ({
         {songs.length > 0 && (
           <span>
             {" • "}
-            总时长 {Math.floor(songs.reduce((acc, song) => acc + song.duration, 0) / 60)} 分钟
+            总时长 {Math.floor(songs.reduce((acc, song) => acc + song.duration, 0) / 60000)} 分钟
           </span>
         )}
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Play, Pause, Shuffle, Trash2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
+import { formatSongDuration } from '../../services/api';
 import type { Song } from '../../types';
 
 interface QueueSidebarProps {
@@ -49,14 +50,9 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
+  // 计算总时长（毫秒转换为分钟）
   const totalDuration = songs.reduce((acc, song) => acc + song.duration, 0);
-  const totalMinutes = Math.floor(totalDuration / 60);
+  const totalMinutes = Math.floor(totalDuration / 60000); // 从毫秒转换为分钟
 
   return (
     <>
@@ -225,7 +221,7 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
                     {/* 时长和操作 */}
                     <div className="flex-shrink-0 flex items-center space-x-2">
                       <span className="text-xs text-gray-400">
-                        {formatDuration(song.duration)}
+                        {formatSongDuration(song.duration)}
                       </span>
                       
                       <button

@@ -5,14 +5,15 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import PlayerBar from '../player/PlayerBar';
 import QueueSidebar from '../player/QueueSidebar';
+import LyricsPanel from '../player/LyricsPanel';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { ui, toggleQueue } = usePlayerStore();
-  const { theme, sidebarCollapsed, showQueue } = ui;
+  const { ui, toggleQueue, toggleLyrics } = usePlayerStore();
+  const { theme, sidebarCollapsed, showQueue, showLyrics } = ui;
 
   return (
     <div className={cn('min-h-screen', theme === 'dark' && 'dark')}>
@@ -34,8 +35,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               'max-md:ml-0' // Hide sidebar on mobile
             )}
           >
-            <div className="p-6">
-              {children}
+            <div className="flex h-full">
+              {/* Page content */}
+              <div className={cn(
+                'transition-all duration-300',
+                showLyrics ? 'flex-1' : 'w-full'
+              )}>
+                <div className="p-6">
+                  {children}
+                </div>
+              </div>
+              
+              {/* Lyrics Panel */}
+              {showLyrics && (
+                <div className="w-96 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <LyricsPanel />
+                </div>
+              )}
             </div>
           </main>
 

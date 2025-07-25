@@ -3,6 +3,8 @@ export { NetEaseAPI, neteaseAPI } from './NetEaseAPI';
 export { SearchAPI } from './SearchAPI';
 export { SongAPI } from './SongAPI';
 export { AuthAPI } from './AuthAPI';
+export { PlaylistAPI } from './PlaylistAPI';
+export { LyricAPI } from './LyricAPI';
 
 // 导出枚举和类
 export { SearchType, APIError } from './types';
@@ -27,6 +29,14 @@ export type {
   SongUrlResponse,
   SongDetailRequest,
   SongDetailResponse,
+  
+  // 歌单相关类型
+  PlaylistDetailRequest,
+  PlaylistDetailResponse,
+  
+  // 歌词相关类型
+  LyricRequest,
+  LyricResponse,
   
   // 用户相关类型
   User,
