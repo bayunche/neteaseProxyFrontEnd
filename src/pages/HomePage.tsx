@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Heart, Music, Clock, Plus, PlayCircle } from 'lucide-react';
+import { Heart, Music, Clock, Plus, PlayCircle, Settings } from 'lucide-react';
 import { usePlayerStore } from '../stores';
 import { SearchBar, SearchResults } from '../components/search';
 import { PlaylistCard, CreatePlaylist } from '../components/playlist';
 import { SongList } from '../components/music';
 import { Button } from '../components/common';
+import { APITestPanel } from '../components/api/APITestPanel';
 import { getTestPlaylist, getTestSong } from '../data/mockSongs';
 
 const HomePage: React.FC = () => {
   const { user, search, play, addToQueue } = usePlayerStore();
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
+  const [showAPITest, setShowAPITest] = useState(false);
   
   const { favorites, playlists, recentPlayed } = user;
 
@@ -44,7 +46,7 @@ const HomePage: React.FC = () => {
           <SearchBar />
         </div>
 
-        {/* 测试音频按钮 */}
+        {/* 测试功能按钮 */}
         <div className="flex justify-center space-x-4 mt-6">
           <Button
             onClick={handleTestPlay}
@@ -62,8 +64,23 @@ const HomePage: React.FC = () => {
           >
             添加测试歌曲
           </Button>
+          <Button
+            onClick={() => setShowAPITest(!showAPITest)}
+            variant={showAPITest ? "primary" : "outline"}
+            size="sm"
+            icon={<Settings className="w-4 h-4" />}
+          >
+            {showAPITest ? '隐藏' : '显示'}API测试
+          </Button>
         </div>
       </div>
+
+      {/* API测试面板 */}
+      {showAPITest && (
+        <div className="mb-8">
+          <APITestPanel />
+        </div>
+      )}
 
       {/* 搜索结果 */}
       {search.keyword && (search.results || search.isSearching) && (

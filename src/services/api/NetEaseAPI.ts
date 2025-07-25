@@ -60,14 +60,22 @@ export class NetEaseAPI {
       ? buildURL(this.baseURL, path, options.params)
       : `${this.baseURL}${path}`;
 
-    // 构建请求配置 - 最小化配置以避免CORS预检
+    // 构建请求配置 - 适配跨域API请求
     const requestConfig: RequestInit = {
       method,
-      // 移除mode和credentials以使用默认值
+      mode: 'cors', // 明确设置CORS模式
+      credentials: 'omit', // 不发送凭据，避免复杂的CORS预检
       // 只有在POST请求且有body时才添加Content-Type
       ...(method !== 'GET' && options.body ? {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      } : {}),
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          // 避免添加自定义头部以减少CORS预检
+        }
+      } : {
+        headers: {
+          // GET请求的基础头部
+        }
+      }),
       signal: AbortSignal.timeout(options.timeout || this.timeout)
     };
 

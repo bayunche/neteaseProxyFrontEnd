@@ -1,10 +1,16 @@
 import type { APIConfig } from './types';
 
+// 环境配置
+const IS_DEVELOPMENT = import.meta.env.DEV;
+const API_BASE_URL = IS_DEVELOPMENT 
+  ? 'http://8.134.196.44:8210'  // 开发环境：直接访问API服务器
+  : 'http://8.134.196.44:8210'; // 生产环境：同样使用API服务器
+
 // NetEase Music API 配置
 export const API_CONFIG: APIConfig = {
-  baseURL: '/api', // 使用代理路径避免CORS问题
-  timeout: 10000, // 10秒超时
-  retryCount: 3,
+  baseURL: API_BASE_URL,
+  timeout: 15000, // 15秒超时（网络请求可能较慢）
+  retryCount: 2, // 减少重试次数避免过长等待
   retryDelay: 1000 // 1秒重试延迟
 };
 
