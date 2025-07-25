@@ -32,11 +32,12 @@ export class SongAPI {
     logger.info(`获取歌曲播放URL: ${id}, 音质: ${br}`);
 
     try {
-      const response = await neteaseAPI.get<SongUrlResponse['data']>(
+      const response = await neteaseAPI.get<any>(
         API_ENDPOINTS.SONG_URL,
         { id, br }
       );
 
+      // NetEase API 响应结构检查
       if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
         logger.warn(`歌曲 ${id} 未找到播放URL`);
         return null;
@@ -154,17 +155,18 @@ export class SongAPI {
     logger.info(`获取歌曲详情: ${idsString}`);
 
     try {
-      const response = await neteaseAPI.get<SongDetailResponse['data']>(
+      const response = await neteaseAPI.get<any>(
         API_ENDPOINTS.SONG_DETAIL,
         { ids: idsString }
       );
 
-      if (!response.data || !response.data.songs) {
+      // NetEase API 响应结构检查
+      if (!response.songs) {
         logger.warn(`未找到歌曲详情: ${idsString}`);
         return [];
       }
 
-      const songs = response.data.songs.map(this.formatSongDetail);
+      const songs = response.songs.map(this.formatSongDetail);
       logger.info(`成功获取 ${songs.length} 首歌曲详情`);
       
       return songs;

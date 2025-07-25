@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { SearchAPI } from '../../services/api/SearchAPI';
 import { SongAPI } from '../../services/api/SongAPI';
+import { AuthAPI } from '../../services/api/AuthAPI';
 import { SearchType } from '../../services/api/types';
 import { Button, Input, Loading } from '../common';
+import { LoginPanel } from '../auth/LoginPanel';
 
 interface APITestPanelProps {
   className?: string;
@@ -80,13 +82,18 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 API服务层测试面板</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          测试NetEase Music API集成功能，验证服务器连接和数据获取
-        </p>
-      </div>
+    <div className={`space-y-6 ${className}`}>
+      {/* 登录面板 */}
+      <LoginPanel onLoginSuccess={(user) => console.log('登录成功:', user)} />
+      
+      {/* API测试面板 */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 API服务层测试面板</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            测试NetEase Music API集成功能，验证服务器连接和数据获取
+          </p>
+        </div>
 
       {/* 测试输入 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -201,14 +208,15 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
         </div>
       )}
 
-      {/* API状态信息 */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <h4 className="text-sm font-medium text-blue-800 mb-2">📊 API服务状态</h4>
-        <div className="text-xs text-blue-700 space-y-1">
-          <div>• API服务器: http://8.134.196.44:8210</div>
-          <div>• 代理服务器: http://8.134.196.44:3001</div>
-          <div>• 超时设置: 15秒</div>
-          <div>• 重试次数: 2次</div>
+        {/* API状态信息 */}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <h4 className="text-sm font-medium text-blue-800 mb-2">📊 API服务状态</h4>
+          <div className="text-xs text-blue-700 space-y-1">
+            <div>• API服务器: http://8.134.196.44:8210</div>
+            <div>• 代理服务器: http://8.134.196.44:3001</div>
+            <div>• 超时设置: 15秒</div>
+            <div>• 重试次数: 2次</div>
+          </div>
         </div>
       </div>
     </div>

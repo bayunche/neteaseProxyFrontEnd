@@ -67,7 +67,7 @@ export class AuthAPI {
 
     try {
       const response = await neteaseAPI.get<SendCodeResponse>(
-        '/user/sent',
+        '/captcha/sent',
         { phone }
       );
 
@@ -118,8 +118,8 @@ export class AuthAPI {
 
     try {
       const response = await neteaseAPI.get<LoginWithCodeResponse>(
-        '/user/cellphone',
-        { phone, code }
+        '/login/cellphone',
+        { phone, captcha: code }
       );
 
       // 处理登录成功 - NetEase API直接返回登录数据，不在data字段中

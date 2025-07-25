@@ -39,17 +39,19 @@ export class SearchAPI {
 
     try {
       const response = await neteaseAPI.get<any>(API_ENDPOINTS.SEARCH, {
-        value: keywords.trim(),
+        keywords: keywords.trim(),
         type,
         limit,
         offset
       });
 
       // 检查API是否返回了有效的搜索结果
+      console.log('搜索API响应:', response);
+      
       if (response.code === 200 && response.result) {
         return this.formatSearchResult(response, type);
       } else {
-        logger.warn('搜索API返回无效数据，使用模拟数据');
+        logger.warn('搜索API返回无效数据，使用模拟数据', response);
         return this.getMockSearchResult(keywords, type, limit);
       }
     } catch (error) {
