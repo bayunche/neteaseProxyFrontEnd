@@ -154,11 +154,17 @@ export class AudioService {
         break;
       case 'list_loop':
         // 列表循环
-        await this.playNext() || await this.playFirst();
+        const hasNextInLoop = await this.playNext();
+        if (!hasNextInLoop) {
+          await this.playFirst();
+        }
         break;
       case 'sequence':
-        // 顺序播放
-        await this.playNext();
+        // 顺序播放 - 如果没有下一首，停止播放
+        const hasNext = await this.playNext();
+        if (!hasNext) {
+          this.stop();
+        }
         break;
       case 'random':
         // 随机播放

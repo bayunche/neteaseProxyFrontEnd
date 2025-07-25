@@ -251,14 +251,20 @@ export const usePlayerStore = create<AppState & AppActions>()(
           }
           
           try {
-            // 添加到队列（如果还没有）
+            // 检查歌曲是否已在队列中
             const currentQueue = audioService.getQueue();
-            if (!currentQueue.songs.find((s: any) => s.id === targetSong.id)) {
-              audioService.addToQueue(targetSong);
-            }
+            const existingIndex = currentQueue.songs.findIndex((s: any) => s.id === targetSong.id);
             
-            // 播放歌曲
-            await audioService.playSong(targetSong);
+            if (existingIndex >= 0) {
+              // 如果歌曲已在队列中，直接播放该位置
+              await audioService.playFromQueue(existingIndex);
+            } else {
+              // 如果歌曲不在队列中，添加到队列并播放
+              audioService.addToQueue(targetSong);
+              const newQueue = audioService.getQueue();
+              const newIndex = newQueue.songs.length - 1;
+              await audioService.playFromQueue(newIndex);
+            }
             
             // 自动加载歌词
             get().loadLyrics(String(targetSong.id));
@@ -355,48 +361,17 @@ export const usePlayerStore = create<AppState & AppActions>()(
         // Queue actions
         addToQueue: (song: Song, index?: number) => {
           audioService.addToQueue(song, index);
-          
-          set((state) => {
-            const newSongs = [...state.queue.songs];
-            if (index !== undefined) {
-              newSongs.splice(index, 0, song);
-            } else {
-              newSongs.push(song);
-            }
-            
-            return {
-              queue: {
-                ...state.queue,
-                songs: newSongs
-              }
-            };
-          });
+          // Store状态会通过audioService的queuechange事件自动更新
         },
         
         removeFromQueue: (index: number) => {
           audioService.removeFromQueue(index);
-          
-          set((state) => ({
-            queue: {
-              ...state.queue,
-              songs: state.queue.songs.filter((_, i) => i !== index),
-              currentIndex: state.queue.currentIndex > index 
-                ? state.queue.currentIndex - 1 
-                : state.queue.currentIndex
-            }
-          }));
+          // Store状态会通过audioService的queuechange事件自动更新
         },
         
         clearQueue: () => {
           audioService.clearQueue();
-          
-          set((state) => ({
-            queue: {
-              ...state.queue,
-              songs: [],
-              currentIndex: -1
-            }
-          }));
+          // Store状态会通过audioService的queuechange事件自动更新
         },
         
         shuffleQueue: () => {
@@ -435,15 +410,16 @@ export const usePlayerStore = create<AppState & AppActions>()(
 
           try {
             // 清空当前队列
-            get().clearQueue();
+            audioService.clearQueue();
+            
+            // 设置新的队列
+            audioService.setQueue(songs, 0);
             
             // 播放第一首歌曲
-            await get().play(songs[0]);
+            await audioService.playFromQueue(0);
             
-            // 将剩余歌曲添加到队列
-            songs.slice(1).forEach(song => {
-              get().addToQueue(song);
-            });
+            // 自动加载歌词
+            get().loadLyrics(String(songs[0].id));
 
             logger.info(`开始播放歌曲列表: ${songs.length}首歌曲`);
           } catch (error) {
