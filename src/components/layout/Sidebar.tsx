@@ -9,7 +9,8 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
@@ -34,10 +35,11 @@ const Sidebar: React.FC = () => {
   }, [isLoggedIn, loadUserPlaylists, playlists.length]);
 
   const navigationItems = [
-    { id: 'home', label: '发现音乐', icon: Home, active: true },
-    { id: 'search', label: '搜索', icon: Search },
-    { id: 'favorites', label: '我的收藏', icon: Heart },
-    { id: 'recent', label: '最近播放', icon: Clock },
+    { id: 'home', label: '发现音乐', icon: Home, active: true, path: '/' },
+    { id: 'search', label: '搜索', icon: Search, path: '/search' },
+    { id: 'favorites', label: '我的收藏', icon: Heart, path: '/favorites' },
+    { id: 'recent', label: '最近播放', icon: Clock, path: '/recent' },
+    { id: 'stats', label: '播放统计', icon: BarChart3, path: '/stats' },
   ];
 
   return (
@@ -72,6 +74,7 @@ const Sidebar: React.FC = () => {
               {navigationItems.map((item) => (
                 <li key={item.id}>
                   <button
+                    onClick={() => navigate(item.path)}
                     className={cn(
                       'w-full flex items-center px-3 py-3 rounded-lg transition-colors text-left',
                       'hover:bg-gray-100 dark:hover:bg-gray-800',

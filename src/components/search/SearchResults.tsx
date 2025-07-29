@@ -134,7 +134,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     <div className="space-y-1">
       {(results.songs || []).map((song, index) => (
         <div
-          key={song.id}
+          key={`song-${song.id}-${index}`}
           className="group flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
         >
           {/* 序号/播放按钮 */}
@@ -206,7 +206,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const renderAlbums = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {(results.albums || []).map((album) => (
-        <div key={album.id} className="group cursor-pointer">
+        <div key={`album-${album.id}-${index}`} className="group cursor-pointer">
           <div className="relative">
             <img
               src={album.picUrl}
@@ -235,7 +235,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const renderArtists = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
       {(results.artists || []).map((artist) => (
-        <div key={artist.id} className="group text-center cursor-pointer">
+        <div key={`artist-${artist.id}-${index}`} className="group text-center cursor-pointer">
           <div className="relative">
             <img
               src={artist.picUrl}
@@ -257,7 +257,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const renderPlaylists = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {(results.playlists || []).map((playlist) => (
-        <div key={playlist.id} className="group cursor-pointer">
+        <div key={`playlist-${playlist.id}-${index}`} className="group cursor-pointer">
           <div className="relative">
             <img
               src={playlist.coverImgUrl}

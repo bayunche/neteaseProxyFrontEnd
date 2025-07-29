@@ -87,7 +87,7 @@ const SongList: React.FC<SongListProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {songs.map((song, index) => (
             <SongCard
-              key={song.id}
+              key={`grid-${song.id}-${index}`}
               song={song}
               index={index}
               variant="grid"
@@ -142,7 +142,7 @@ const SongList: React.FC<SongListProps> = ({
       <div className="space-y-1">
         {songs.map((song, index) => (
           <SongCard
-            key={song.id}
+            key={`list-${song.id}-${index}`}
             song={song}
             index={index}
             variant="list"

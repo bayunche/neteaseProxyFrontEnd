@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Play, 
   Pause, 
@@ -18,6 +19,7 @@ import { PlayMode } from '../../types';
 import ProgressBar from './ProgressBar';
 
 const PlayerBar: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     player, 
     ui,
@@ -83,6 +85,12 @@ const PlayerBar: React.FC = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const handleSongImageClick = () => {
+    if (currentSong) {
+      navigate('/lyrics');
+    }
+  };
+
   return (
     <div className="h-20 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6">
       <div className="flex items-center h-full">
@@ -93,7 +101,9 @@ const PlayerBar: React.FC = () => {
               <img
                 src={currentSong.coverUrl}
                 alt={currentSong.title}
-                className="w-12 h-12 rounded-lg object-cover"
+                className="w-12 h-12 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleSongImageClick}
+                title="点击查看歌词"
               />
               <div className="ml-3 min-w-0">
                 <div className="font-medium text-gray-900 dark:text-white truncate">

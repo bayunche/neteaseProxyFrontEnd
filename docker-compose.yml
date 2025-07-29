@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  claude-dev:
+    build: .
+    container_name: claude-dev-player
+    volumes:
+      - ./:/workspace
+      - ~/.claude-code-router:/root/.claude-code-router
+    ports:
+      - "3456:3456" # 如果 Router 使用 HTTP 端口，可映射
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    working_dir: /workspace
+    tty: true

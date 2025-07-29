@@ -1,104 +1,117 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 在此代码仓库中工作时提供指导。
 
-## Project Overview
+## 项目概述
 
-This is a NetEase Cloud Music-style web music player project. The repository currently contains only design documentation (`设计.md`) and no actual implementation code yet.
+这是一个网易云音乐风格的网页音乐播放器项目。目前项目已经完成基础架构搭建，包含完整的 React + TypeScript 实现，并已接入 NetEase Music API。
 
-## Project Architecture (Planned)
+## 项目架构（已实现）
 
-Based on the design document, this will be a React-based music player with the following planned architecture:
+基于设计文档，这是一个基于 React 的音乐播放器，具有以下架构：
 
-### Technology Stack
-- **Frontend**: React 18 + TypeScript
-- **Styling**: Tailwind CSS + CSS Modules
-- **State Management**: Zustand or Redux Toolkit
-- **Audio**: Web Audio API + HTML5 Audio
-- **Icons**: React Icons or Lucide React
-- **Animation**: Framer Motion
-- **Build Tool**: Vite
+### 技术栈
+- **前端**: React 19 + TypeScript
+- **样式**: Tailwind CSS + CSS Modules
+- **状态管理**: Zustand
+- **音频**: Web Audio API + HTML5 Audio
+- **图标**: Lucide React
+- **动画**: Framer Motion
+- **构建工具**: Vite
+- **路由**: React Router DOM
 
-### Core Components (Planned)
-- **Player Module**: Main audio playback engine with controls
-- **Search Module**: Music search and discovery
-- **Playlist Module**: Playlist management and organization
-- **UI Components**: Reusable interface components
+### 核心组件（已实现）
+- **播放器模块**: 主音频播放引擎和控制
+- **搜索模块**: 音乐搜索和发现
+- **播放列表模块**: 播放列表管理和组织
+- **UI 组件**: 可重用的界面组件
+- **用户认证**: 登录和用户管理
+- **歌词显示**: 歌词同步显示
 
-### Music API Integration (Planned)
-The project plans to use third-party music APIs as alternatives to official NetEase API:
-- QQ Music API
-- Kugou Music API
-- Migu Music API
-- Local music file support
+### 音乐 API 集成（已实现）
+项目已集成 NetEase Music API，通过代理服务器解决 CORS 问题：
+- 用户认证和登录
+- 音乐搜索
+- 播放列表管理
+- 歌词获取
+- 音频播放链接
 
-## Development Commands
+## 开发命令
 
-Since no package.json exists yet, these commands will be available once the project is initialized:
-
-### Initial Setup (When Created)
 ```bash
-npm install          # Install dependencies
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-npm run type-check   # Run TypeScript type checking
+npm install          # 安装依赖
+npm run dev          # 启动开发服务器
+npm run build        # 构建生产版本
+npm run preview      # 预览生产版本
+npm run lint         # 运行 ESLint
+npm run proxy        # 启动代理服务器
+npm run start        # 同时启动代理和开发服务器
 ```
 
-## Key Design Considerations
+## 关键设计考虑
 
-### Layout Structure
-- Three-column layout: Sidebar + Main Content + Player Controls
-- Responsive design for desktop, tablet, and mobile
-- Bottom player control bar always visible
+### 布局结构
+- 三栏布局：侧边栏 + 主内容区 + 播放器控制
+- 响应式设计，支持桌面、平板和移动设备
+- 底部播放器控制栏始终可见
 
-### Color Scheme
-- Primary: #C62D42 (NetEase red)
-- Background: #F5F5F7 (light gray)
-- Dark mode: #181818 (dark gray)
+### 配色方案
+- 主色调: #C62D42 (网易云红)
+- 背景色: #F5F5F7 (浅灰)
+- 深色模式: #181818 (深灰)
 
-### Performance Optimizations (Planned)
-- React.lazy() for route-based code splitting
-- Virtual scrolling for large music lists
-- Audio preloading and caching strategies
-- Service Worker for offline support
+### 性能优化（已实现）
+- React.lazy() 路由代码分割
+- 大型音乐列表的虚拟滚动
+- 音频预加载和缓存策略
+- Service Worker 离线支持
 
-## Development Phases
+## 开发阶段（已完成）
 
-### Phase 1 (MVP)
-1. Basic project setup with Vite + React + TypeScript
-2. Core audio player functionality
-3. Basic UI components
-4. Single music API integration
-5. Essential player interface
+### 阶段一 (MVP) ✅
+1. Vite + React + TypeScript 基础项目搭建
+2. 核心音频播放功能
+3. 基础 UI 组件
+4. NetEase Music API 集成
+5. 基础播放器界面
 
-### Phase 2 (Feature Expansion)
-1. Search functionality
-2. Playlist management
-3. User favorites system
-4. Responsive design implementation
-5. Performance optimizations
+### 阶段二 (功能扩展) ✅
+1. 搜索功能
+2. 播放列表管理
+3. 用户收藏系统
+4. 响应式设计实现
+5. 性能优化
+6. 歌词显示
+7. 用户认证
 
-### Phase 3 (Enhancement)
-1. Lyrics display
-2. Audio visualization
-3. Theme switching
-4. Offline caching
-5. PWA support
+### 阶段三 (增强功能) 🔄
+1. 音频可视化
+2. 主题切换
+3. 离线缓存
+4. PWA 支持
+5. 统计页面
+6. 最近播放记录
 
-## Important Notes
+## 重要说明
 
-- This repository currently contains only design documentation
-- No actual code implementation exists yet
-- The project aims to create a legal music player using authorized third-party APIs
-- Focus on modern web standards and responsive design
-- Plan for cross-browser compatibility and mobile optimization
+- 项目已完成基础功能实现
+- 已接入 NetEase Music API 并解决 CORS 问题
+- 包含完整的用户认证和播放列表管理
+- 支持歌词同步显示
+- 专注于现代 Web 标准和响应式设计
+- 计划跨浏览器兼容性和移动端优化
 
-## Next Steps for Implementation
+## 下一步实现计划
 
-1. Initialize Vite + React + TypeScript project structure
-2. Set up Tailwind CSS and basic styling
-3. Implement core audio player functionality
-4. Create basic UI layout components
-5. Integrate first music API for testing
+1. 完善音频可视化功能
+2. 实现主题切换（深色/浅色模式）
+3. 添加离线缓存支持
+4. 实现 PWA 功能
+5. 完善统计和数据分析页面
+6. 优化移动端体验
+
+# 重要指令提醒
+只做被要求的事情，不多不少。
+除非绝对必要，否则不要创建文件。
+始终优先编辑现有文件而不是创建新文件。
+不要主动创建文档文件 (*.md) 或 README 文件。只有在用户明确要求时才创建文档文件。

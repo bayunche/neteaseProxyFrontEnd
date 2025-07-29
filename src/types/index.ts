@@ -130,6 +130,104 @@ export interface UserSettings {
   equalizer: EqualizerSettings | null;
 }
 
+// 播放历史统计相关类型
+export interface PlayHistoryEntry {
+  id: string;
+  songId: string | number;
+  song: Song;
+  playedAt: Date;
+  duration: number; // 播放时长（秒）
+  completed: boolean; // 是否播放完整
+  source: 'manual' | 'auto' | 'shuffle' | 'repeat'; // 播放来源
+  deviceInfo?: {
+    platform: string;
+    userAgent: string;
+  };
+}
+
+export interface DailyStats {
+  date: string; // YYYY-MM-DD
+  totalPlayTime: number; // 总播放时长（秒）
+  songCount: number; // 播放歌曲数量
+  uniqueSongCount: number; // 不重复歌曲数量
+  topSongs: Array<{
+    song: Song;
+    playCount: number;
+    totalDuration: number;
+  }>;
+  topArtists: Array<{
+    artist: string;
+    playCount: number;
+    totalDuration: number;
+  }>;
+  playModeStats: Record<PlayMode, number>; // 各播放模式使用次数
+}
+
+export interface WeeklyStats {
+  weekStart: string; // YYYY-MM-DD (周一)
+  weekEnd: string; // YYYY-MM-DD (周日)
+  totalPlayTime: number;
+  dailyBreakdown: DailyStats[];
+  topSongs: Array<{
+    song: Song;
+    playCount: number;
+    totalDuration: number;
+  }>;
+  topArtists: Array<{
+    artist: string;
+    playCount: number;
+    totalDuration: number;
+  }>;
+  genreStats?: Array<{
+    genre: string;
+    playCount: number;
+    totalDuration: number;
+  }>;
+}
+
+export interface MonthlyStats {
+  month: string; // YYYY-MM
+  totalPlayTime: number;
+  weeklyBreakdown: WeeklyStats[];
+  topSongs: Array<{
+    song: Song;
+    playCount: number;
+    totalDuration: number;
+  }>;
+  topArtists: Array<{
+    artist: string;
+    playCount: number;
+    totalDuration: number;
+  }>;
+  discoveryStats: {
+    newSongsCount: number;
+    newArtistsCount: number;
+  };
+}
+
+export interface PlayStats {
+  allTime: {
+    totalPlayTime: number;
+    totalSongs: number;
+    uniqueSongs: number;
+    uniqueArtists: number;
+    avgSessionLength: number;
+    longestSession: number;
+    favoriteSong?: Song;
+    favoriteArtist?: string;
+  };
+  recent: {
+    lastWeek: WeeklyStats;
+    lastMonth: MonthlyStats;
+    yesterday: DailyStats;
+  };
+  trends: {
+    playTimeGrowth: number; // 相比上周/月的增长百分比
+    discoveryRate: number; // 新歌发现率
+    repeatRate: number; // 重复播放率
+  };
+}
+
 export interface EqualizerSettings {
   enabled: boolean;
   preset: string;

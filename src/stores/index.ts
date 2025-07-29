@@ -4,6 +4,7 @@ import type { Song, Playlist, PlaybackState, UserSettings, Lyrics } from '../typ
 import { PlayMode } from '../types';
 import { audioService } from '../services/audio';
 import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult } from '../services/api';
+import { statsService } from '../services/StatsService';
 
 // Extended search result with pagination info
 interface ExtendedSearchResult extends APISearchResult {
@@ -74,6 +75,13 @@ interface AppState {
     history: string[];
     suggestions: string[];
   };
+
+  // Stats state
+  stats: {
+    isLoading: boolean;
+    data: any | null;
+    error: string | null;
+  };
 }
 
 // Actions interface
@@ -138,6 +146,17 @@ interface AppActions {
   loadLyrics: (songId: string) => Promise<void>;
   updateCurrentLyricLine: (currentTime: number) => void;
   clearLyrics: () => void;
+
+  // Stats actions
+  loadStats: () => Promise<void>;
+  clearStats: () => void;
+  exportStats: () => string;
+  importStats: (data: string) => boolean;
+
+  // Recent played actions
+  getRecentPlayed: () => Song[];
+  clearRecentPlayed: () => void;
+  updateRecentPlayed: (song: Song) => void;
 }
 
 // Initial state
@@ -199,6 +218,11 @@ const initialState: AppState = {
     history: [],
     suggestions: [],
   },
+  stats: {
+    isLoading: false,
+    data: null,
+    error: null,
+  },
 };
 
 // Create the store
@@ -236,6 +260,45 @@ export const usePlayerStore = create<AppState & AppActions>()(
           }));
         });
 
+        // 初始化时恢复播放状态
+        const initializePersistedState = () => {
+          const state = get();
+          
+          // 恢复音频服务配置
+          if (state.player.volume !== undefined) {
+            audioService.setVolume(state.player.volume);
+          }
+          
+          if (state.player.playMode) {
+            audioService.setPlayMode(state.player.playMode);
+          }
+          
+          // 恢复播放队列
+          if (state.queue.songs.length > 0) {
+            console.log('恢复播放队列:', state.queue.songs.length, '首歌曲，当前索引:', state.queue.currentIndex);
+            audioService.setQueue(state.queue.songs, state.queue.currentIndex);
+            
+            // 如果有当前歌曲且索引有效，预加载它但不自动播放
+            if (state.player.currentSong && 
+                state.queue.currentIndex >= 0 && 
+                state.queue.currentIndex < state.queue.songs.length) {
+              
+              console.log('恢复当前播放歌曲:', state.player.currentSong.title);
+              
+              // 直接更新音频服务的状态，不实际播放
+              set((currentState) => ({
+                player: {
+                  ...currentState.player,
+                  currentSong: state.player.currentSong
+                }
+              }));
+            }
+          }
+        };
+
+        // 延迟初始化以确保组件完全加载
+        setTimeout(initializePersistedState, 100);
+
         return {
           ...initialState,
         
@@ -269,16 +332,11 @@ export const usePlayerStore = create<AppState & AppActions>()(
             // 自动加载歌词
             get().loadLyrics(String(targetSong.id));
             
+            // 记录播放统计
+            statsService.onSongChange(targetSong, 'manual');
+            
             // 更新最近播放
-            set((state) => ({
-              user: {
-                ...state.user,
-                recentPlayed: [
-                  targetSong,
-                  ...state.user.recentPlayed.filter(s => s.id !== targetSong.id)
-                ].slice(0, 50)
-              }
-            }));
+            get().updateRecentPlayed(targetSong);
           } catch (error) {
             console.error('播放失败:', error);
           }
@@ -314,6 +372,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
         
         setPlayMode: (mode: PlayMode) => {
           audioService.setPlayMode(mode);
+          statsService.onPlayModeChange(mode);
           set((state) => ({
             player: {
               ...state.player,
@@ -994,6 +1053,86 @@ export const usePlayerStore = create<AppState & AppActions>()(
             }
           }));
         },
+
+        // Stats actions implementation
+        loadStats: async () => {
+          set((state) => ({
+            stats: {
+              ...state.stats,
+              isLoading: true,
+              error: null
+            }
+          }));
+
+          try {
+            const statsData = statsService.getPlayStats();
+            
+            set((state) => ({
+              stats: {
+                ...state.stats,
+                isLoading: false,
+                data: statsData
+              }
+            }));
+          } catch (error) {
+            set((state) => ({
+              stats: {
+                ...state.stats,
+                isLoading: false,
+                error: error instanceof Error ? error.message : '加载统计数据失败'
+              }
+            }));
+          }
+        },
+
+        clearStats: () => {
+          statsService.clearStats();
+          set((state) => ({
+            stats: {
+              ...state.stats,
+              data: null
+            }
+          }));
+        },
+
+        exportStats: () => {
+          return statsService.exportStats();
+        },
+
+        importStats: (data: string) => {
+          const success = statsService.importStats(data);
+          if (success) {
+            // 重新加载统计数据
+            get().loadStats();
+          }
+          return success;
+        },
+
+        // Recent played actions implementation
+        getRecentPlayed: () => {
+          return get().user.recentPlayed;
+        },
+
+        clearRecentPlayed: () => {
+          set((state) => ({
+            user: {
+              ...state.user,
+              recentPlayed: []
+            }
+          }));
+        },
+
+        updateRecentPlayed: (song: Song) => {
+          set((state) => ({
+            user: {
+              ...state.user,
+              recentPlayed: [
+                song,
+                ...state.user.recentPlayed.filter(s => s.id !== song.id)
+              ].slice(0, 100) // 只保留最近100首
+            }
+          }));
+        },
         };
       },
       {
@@ -1006,6 +1145,22 @@ export const usePlayerStore = create<AppState & AppActions>()(
           },
           search: {
             history: state.search.history
+          },
+          // 持久化播放相关状态
+          player: {
+            currentSong: state.player.currentSong,
+            volume: state.player.volume,
+            isMuted: state.player.isMuted,
+            playMode: state.player.playMode
+          },
+          queue: {
+            songs: state.queue.songs,
+            currentIndex: state.queue.currentIndex
+          },
+          // 确保用户数据包含最近播放
+          user: {
+            ...state.user,
+            recentPlayed: state.user.recentPlayed
           }
         })
       }

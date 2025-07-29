@@ -323,7 +323,7 @@ export class AudioService {
 
   setQueue(songs: Song[], startIndex = 0): void {
     this.queue.songs = songs;
-    this.queue.currentIndex = startIndex;
+    this.queue.currentIndex = Math.max(0, Math.min(startIndex, songs.length - 1));
     this.eventManager.emit('queuechange', this.queue);
   }
 

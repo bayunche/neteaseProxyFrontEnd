@@ -13,7 +13,9 @@ import {
   Music2,
   Shuffle,
   Plus,
-  ChevronLeft
+  ChevronLeft,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { usePlayerStore } from '../stores';
@@ -26,6 +28,7 @@ const PlaylistDetailPage: React.FC = () => {
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(false);
 
   const {
     player,
@@ -289,23 +292,41 @@ const PlaylistDetailPage: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
         {/* 列表头部 */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
-            <div className="w-8 text-center">#</div>
-            <div className="flex-1 ml-4">歌曲</div>
-            <div className="w-32 text-right">时长</div>
-            <div className="w-16"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
+              <div className="w-8 text-center">#</div>
+              <div className="flex-1 ml-4">歌曲</div>
+              <div className="w-32 text-right">时长</div>
+              <div className="w-16"></div>
+            </div>
+            <button
+              onClick={() => setIsPlaylistCollapsed(!isPlaylistCollapsed)}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors"
+              title={isPlaylistCollapsed ? "展开播放列表" : "收起播放列表"}
+            >
+              {isPlaylistCollapsed ? (
+                <ChevronDown className="w-5 h-5" />
+              ) : (
+                <ChevronUp className="w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
 
         {/* 歌曲列表 */}
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        <div 
+          className={cn(
+            "divide-y divide-gray-100 dark:divide-gray-700 transition-all duration-300 ease-in-out overflow-hidden",
+            isPlaylistCollapsed ? "max-h-0" : "max-h-[600px] overflow-y-auto"
+          )}
+        >
           {playlist.songs.map((song, index) => {
             const isCurrentSong = currentSong?.id === song.id;
             const isFavorite = favorites.some(fav => fav.id === song.id);
 
             return (
               <div
-                key={song.id}
+                key={`${song.id}-${index}`}
                 className={cn(
                   "group flex items-center px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors",
                   isCurrentSong && "bg-primary-50 dark:bg-primary-900/20"

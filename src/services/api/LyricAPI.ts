@@ -3,10 +3,9 @@ import { API_ENDPOINTS } from './config';
 import type { 
   LyricRequest,
   LyricResponse,
-  LyricLine,
-  APIErrorType
+  LyricLine
 } from './types';
-import { APIError } from './types';
+import { APIError, APIErrorType } from './types';
 import { logger } from './utils';
 import type { Lyrics } from '../../types';
 
@@ -43,8 +42,8 @@ export class LyricAPI {
         // 解析歌词
         const lyrics = this.parseLyric(response);
         
-        if (lyrics) {
-          logger.info(`获取歌词成功: ${lyrics.lines.length}行`);
+        if (lyrics && lyrics.length > 0) {
+          logger.info(`获取歌词成功: ${lyrics.length}行`);
           return {
             songId: String(id),
             lines: lyrics,
