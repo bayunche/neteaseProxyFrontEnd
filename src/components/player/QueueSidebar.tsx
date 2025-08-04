@@ -62,19 +62,18 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
       {/* 背景遮罩 */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-25 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
           onClick={onClose}
         />
       )}
 
       {/* 侧边栏 */}
       <div className={cn(
-        "fixed right-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ease-in-out",
-        isOpen ? "translate-x-0" : "translate-x-full",
-        "lg:relative lg:translate-x-0"
+        "fixed right-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
+        isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         {/* 头部 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               播放队列
@@ -90,14 +89,15 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors lg:hidden"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            title="关闭播放队列"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex items-center space-x-2 p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex-shrink-0 flex items-center space-x-2 p-4 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={handlePlayPause}
             disabled={songs.length === 0}
@@ -141,7 +141,7 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* 队列列表 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           {songs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
