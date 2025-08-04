@@ -31,6 +31,7 @@ const PlaylistDetailPage: React.FC = () => {
 
   const {
     player,
+    user,
     play,
     pause,
     addToQueue,

@@ -15,31 +15,33 @@ const LyricsPage: React.FC = () => {
   useEffect(() => {
     if (currentSong) {
       setCurrentView('content');
+      
+      // 清理之前的定时器
       if (autoSwitchTimer) {
         clearTimeout(autoSwitchTimer);
       }
+      
       // 设置3秒自动切换定时器
       const timer = setTimeout(() => {
         setCurrentView('lyrics');
       }, 3000);
       setAutoSwitchTimer(timer);
+      
+      // 清理函数
+      return () => {
+        clearTimeout(timer);
+      };
     }
-    
-    return () => {
-      if (autoSwitchTimer) {
-        clearTimeout(autoSwitchTimer);
-      }
-    };
-  }, [currentSong, autoSwitchTimer]);
+  }, [currentSong]); // 只依赖 currentSong
 
-  // 清理定时器
+  // 组件卸载时清理定时器
   useEffect(() => {
     return () => {
       if (autoSwitchTimer) {
         clearTimeout(autoSwitchTimer);
       }
     };
-  }, [autoSwitchTimer]);
+  }, []); // 空依赖数组，仅在组件卸载时运行
 
   const handleBackClick = () => {
     window.history.back();
@@ -48,6 +50,7 @@ const LyricsPage: React.FC = () => {
   const handleScrollDetected = () => {
     if (autoSwitchTimer) {
       clearTimeout(autoSwitchTimer);
+      setAutoSwitchTimer(null);
     }
     setCurrentView('lyrics');
   };
