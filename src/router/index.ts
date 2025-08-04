@@ -77,8 +77,7 @@ export const routes: RouteConfig[] = [
     path: '/lyrics',
     component: LyricsPage,
     title: '歌词',
-    showInNavigation: false,
-    mobileOnly: true // 桌面端使用侧边栏显示歌词
+    showInNavigation: false
   }
 ];
 
