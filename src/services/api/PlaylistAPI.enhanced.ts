@@ -1,6 +1,8 @@
-import { APIClient, API_ENDPOINTS, APIError, APIErrorType, logger } from './base';
+import { API_ENDPOINTS } from './config';
+import { APIError, APIErrorType } from './types';
+import { logger } from './utils';
 import { PlaylistDetailResponse, Song, Playlist } from './types';
-import { neteaseAPI } from './netease';
+import { neteaseAPI } from './NetEaseAPI';
 
 export interface PlaylistDetailRequest {
   id: string | number;
