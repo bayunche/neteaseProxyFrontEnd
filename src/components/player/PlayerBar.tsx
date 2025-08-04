@@ -5,8 +5,6 @@ import {
   Pause, 
   SkipBack, 
   SkipForward, 
-  Volume2, 
-  VolumeX,
   Shuffle,
   Repeat,
   Repeat1,
@@ -17,6 +15,7 @@ import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
 import { PlayMode } from '../../types';
 import ProgressBar from './ProgressBar';
+import VolumeControl from './VolumeControl';
 
 const PlayerBar: React.FC = () => {
   const navigate = useNavigate();
@@ -53,10 +52,6 @@ const PlayerBar: React.FC = () => {
     }
   };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
-  };
 
   const getPlayModeIcon = () => {
     switch (playMode) {
@@ -209,36 +204,12 @@ const PlayerBar: React.FC = () => {
         </div>
 
         {/* Volume control */}
-        <div className="flex items-center w-64 justify-end">
-          <button
-            onClick={toggleMute}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-          >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
-          </button>
-          
-          <div className="ml-2 w-24">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={isMuted ? 0 : volume}
-              onChange={handleVolumeChange}
-              className={cn(
-                'w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer'
-              )}
-            />
-          </div>
-          
-          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 w-8">
-            {Math.round((isMuted ? 0 : volume) * 100)}
-          </span>
-        </div>
+        <VolumeControl
+          volume={volume}
+          isMuted={isMuted}
+          onVolumeChange={setVolume}
+          onToggleMute={toggleMute}
+        />
       </div>
     </div>
   );
