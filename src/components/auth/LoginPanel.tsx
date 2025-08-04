@@ -5,7 +5,7 @@ import { AuthAPI } from '../../services/api/AuthAPI';
 
 interface LoginPanelProps {
   className?: string;
-  onLoginSuccess?: (user: any) => void;
+  onLoginSuccess?: (user: Record<string, unknown>) => void;
 }
 
 /**

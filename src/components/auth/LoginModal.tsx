@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Phone, Key, Loader } from 'lucide-react';
+import { X, Phone, Key } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
 import Button from '../common/Button';

@@ -1,8 +1,21 @@
 // NetEase Music API 类型定义
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   code: number;
   message?: string;
   data?: T;
+}
+
+// 用户绑定信息类型
+export interface UserBinding {
+  id: number;
+  type: number;
+  userId: number;
+  url: string;
+  expired: boolean;
+  bindingTime: number;
+  tokenJsonStr?: string;
+  expiresIn?: number;
+  refreshTime?: number;
 }
 
 // 搜索相关类型
@@ -156,7 +169,7 @@ export interface LoginResponse extends APIResponse {
   };
   token: string;
   profile: User;
-  bindings: any[];
+  bindings: UserBinding[];
   cookie: string;
 }
 
@@ -190,8 +203,8 @@ export interface UserStatus {
       description: string;
       detailDescription: string;
       defaultAvatar: boolean;
-      expertTags: any[];
-      experts: any[];
+      expertTags: string[];
+      experts: Record<string, unknown>[];
       djStatus: number;
       locationStatus: number;
       vipType: number;
@@ -203,7 +216,7 @@ export interface UserStatus {
       remarkName: string;
       viptypeVersion: number;
       authenticationTypes: number;
-      avatarDetail: any;
+      avatarDetail: Record<string, unknown> | null;
       anchor: boolean;
     };
   };
@@ -266,7 +279,7 @@ export interface PlaylistDetailResponse extends APIResponse {
     officialPlaylistType: string;
     copied: boolean;
     relateResType: string;
-    subscribers: any[];
+    subscribers: User[];
     subscribed: boolean;
     creator: {
       defaultAvatar: boolean;
@@ -289,21 +302,21 @@ export interface PlaylistDetailResponse extends APIResponse {
       backgroundUrl: string;
       authority: number;
       mutual: boolean;
-      expertTags: any[];
-      experts: any[];
+      expertTags: string[];
+      experts: Record<string, unknown>[];
       djStatus: number;
       vipType: number;
       remarkName: string;
       authenticationTypes: number;
-      avatarDetail: any;
+      avatarDetail: Record<string, unknown> | null;
       avatarImgIdStr: string;
       backgroundImgIdStr: string;
       anchor: boolean;
       avatarImgId_str: string;
     };
-    tracks: any[]; // 歌曲列表，可能为空（超过1000首时）
-    videoIds: any[];
-    videos: any[];
+    tracks: Song[]; // 歌曲列表，可能为空（超过1000首时）
+    videoIds: string[];
+    videos: Record<string, unknown>[];
     trackIds: Array<{
       id: number;
       v: number;
@@ -312,24 +325,24 @@ export interface PlaylistDetailResponse extends APIResponse {
       alg: string;
       uid: number;
       rcmdReason: string;
-      sc: any;
-      f: any;
-      sr: any;
+      sc: Record<string, unknown>;
+      f: Record<string, unknown>;
+      sr: Record<string, unknown>;
     }>;
     shareCount: number;
     commentCount: number;
-    remixVideo: any;
-    sharedUsers: any[];
-    historySharedUsers: any[];
+    remixVideo: Record<string, unknown> | null;
+    sharedUsers: User[];
+    historySharedUsers: User[];
     gradeStatus: string;
-    score: any;
-    algTags: any[];
+    score: number | null;
+    algTags: string[];
     trialMode: number;
-    displayTags: any[];
-    platFormAlgTags: any[];
+    displayTags: string[];
+    platFormAlgTags: string[];
     upateTime: number;
   };
-  privileges: any[];
+  privileges: Record<string, unknown>[];
 }
 
 // 歌曲详情相关类型
@@ -339,7 +352,7 @@ export interface SongDetailRequest {
 
 export interface SongDetailResponse extends APIResponse {
   songs: Song[];
-  privileges: any[];
+  privileges: Record<string, unknown>[];
 }
 
 // 歌词相关类型
@@ -400,7 +413,7 @@ export class APIError extends Error {
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: Record<string, string>;
-  body?: any;
+  body?: Record<string, unknown> | string;
   params?: Record<string, string | number>;
   timeout?: number;
 }

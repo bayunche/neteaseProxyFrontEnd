@@ -18,9 +18,8 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
   const [searchKeyword, setSearchKeyword] = useState('周杰伦');
   const [songId, setSongId] = useState('186016');
   const [loading, setLoading] = useState<string | null>(null);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
 
   // 清除结果
   const clearResults = () => {
@@ -29,7 +28,7 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
   };
 
   // 执行API测试
-  const executeTest = async (testName: string, testFn: () => Promise<any>) => {
+  const executeTest = async (testName: string, testFn: () => Promise<unknown>) => {
     setLoading(testName);
     setError(null);
     setResults(null);
