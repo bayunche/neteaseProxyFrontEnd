@@ -4,7 +4,7 @@ import type { Song, Playlist, PlaybackState, UserSettings, Lyrics } from '../typ
 import { PlayMode } from '../types';
 import { audioService } from '../services/audio';
 import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult } from '../services/api';
-import { statsService } from '../services/StatsService';
+import { statsService, type UserStats } from '../services/StatsService';
 
 // Extended search result with pagination info
 interface ExtendedSearchResult extends APISearchResult {
@@ -79,7 +79,7 @@ interface AppState {
   // Stats state
   stats: {
     isLoading: boolean;
-    data: any | null;
+    data: UserStats | null;
     error: string | null;
   };
 }
@@ -341,7 +341,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
             if (song) {
               // 如果指定了歌曲，直接播放
               const currentQueue = audioService.getQueue();
-              const existingIndex = currentQueue.songs.findIndex((s: any) => s.id === song.id);
+              const existingIndex = currentQueue.songs.findIndex((s: Song) => s.id === song.id);
               
               if (existingIndex >= 0) {
                 // 如果歌曲已在队列中，直接播放该位置

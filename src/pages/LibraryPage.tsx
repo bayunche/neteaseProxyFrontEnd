@@ -41,7 +41,7 @@ const LibraryPage: React.FC = () => {
     }
   };
 
-  const handlePlayAll = (songs: any[]) => {
+  const handlePlayAll = (songs: Song[]) => {
     if (songs.length > 0) {
       playAllSongs(songs);
     }

@@ -70,7 +70,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const getAudioDuration = (audioUrl: string): Promise<number> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const audio = new Audio();
       
       const handleLoadedMetadata = () => {

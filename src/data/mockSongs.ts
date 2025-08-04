@@ -1,5 +1,5 @@
 import type { Song } from '../types';
-import { generateTestAudio, generateTestSounds, checkAudioSupport } from '../utils/audioGenerator';
+import { generateTestSounds, checkAudioSupport } from '../utils/audioGenerator';
 
 // 免费可用的音频文件示例
 export const mockSongs: Song[] = [

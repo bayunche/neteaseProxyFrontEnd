@@ -7,7 +7,7 @@ import { Button, Input, Modal } from '../common';
 interface CreatePlaylistProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultSongs?: any[];
+  defaultSongs?: Record<string, unknown>[];
 }
 
 const CreatePlaylist: React.FC<CreatePlaylistProps> = ({

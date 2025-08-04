@@ -431,7 +431,7 @@ export class AudioService {
     }
     
     const removedSong = this.queue.songs[index];
-    const wasCurrentSong = index === this.queue.currentIndex;
+    const isCurrentSong = index === this.queue.currentIndex;
     const wasPlaying = this.state.isPlaying;
     
     console.log(`删除队列歌曲: "${removedSong.title}" (索引 ${index}), 当前索引: ${this.queue.currentIndex}`);
@@ -457,7 +457,7 @@ export class AudioService {
         // 删除的是当前歌曲之前的歌曲，索引前移
         this.queue.currentIndex--;
         console.log(`索引调整: ${this.queue.currentIndex + 1} -> ${this.queue.currentIndex}`);
-      } else if (index === this.queue.currentIndex) {
+      } else if (isCurrentSong) {
         // 删除的是当前播放的歌曲
         if (this.queue.currentIndex >= this.queue.songs.length) {
           // 索引超出范围，调整到最后一首

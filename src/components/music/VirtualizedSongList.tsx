@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import { 
   Play, 
-  Pause, 
   Heart, 
   Plus, 
-  MoreHorizontal,
   Loader
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
