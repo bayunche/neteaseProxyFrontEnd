@@ -30,7 +30,7 @@ const LyricsPage: React.FC = () => {
         clearTimeout(autoSwitchTimer);
       }
     };
-  }, [currentSong]);
+  }, [currentSong, autoSwitchTimer]);
 
   // 清理定时器
   useEffect(() => {

@@ -4,7 +4,6 @@ import {
   Play, 
   Pause, 
   Heart, 
-  Download, 
   Share2, 
   MoreHorizontal,
   Clock,
@@ -18,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { usePlayerStore } from '../stores';
-import { formatSongDuration, formatPlayCount } from '../services/api';
+import { formatPlayCount } from '../services/api';
 import { EnhancedPlaylistAPI } from '../services/api/PlaylistAPI.enhanced';
 import VirtualizedSongList from '../components/music/VirtualizedSongList';
 import type { Playlist, Song } from '../types';
@@ -50,18 +49,13 @@ const EnhancedPlaylistDetailPage: React.FC = () => {
 
   const {
     player,
-    queue,
     user,
     play,
     pause,
-    addToQueue,
-    addToFavorites,
-    removeFromFavorites,
     playAllSongs
   } = usePlayerStore();
 
   const { currentSong, isPlaying } = player;
-  const { favorites } = user;
 
   // 加载歌单基本信息
   const loadPlaylistInfo = useCallback(async () => {
@@ -83,8 +77,7 @@ const EnhancedPlaylistDetailPage: React.FC = () => {
         totalSongs: info.trackCount || 0
       }));
       
-      // 加载第一页歌曲
-      await loadSongs(0, 50);
+      // 在useEffect中调用loadSongs来避免循环依赖
       
     } catch (err) {
       console.error('加载歌单信息失败:', err);
@@ -111,7 +104,7 @@ const EnhancedPlaylistDetailPage: React.FC = () => {
         const newSongs = [...prev.songs];
         
         // 填充新数据到对应位置
-        response.songs.forEach((song, index) => {
+        response.songs.forEach((song) => {
           newSongs[offset + index] = song;
         });
 
@@ -132,7 +125,7 @@ const EnhancedPlaylistDetailPage: React.FC = () => {
   }, [playlistId]);
 
   // 处理加载更多
-  const handleLoadMore = useCallback(async (startIndex: number, stopIndex: number) => {
+  const handleLoadMore = useCallback(async (startIndex: number) => {
     const pageSize = 50;
     const startPage = Math.floor(startIndex / pageSize);
     const offset = startPage * pageSize;
@@ -169,7 +162,7 @@ const EnhancedPlaylistDetailPage: React.FC = () => {
   }, [playlist, currentSong, isPlaying, play, pause]);
 
   // 处理歌曲点击
-  const handleSongClick = useCallback((song: Song, index: number) => {
+  const handleSongClick = useCallback((song: Song) => {
     play(song);
   }, [play]);
 

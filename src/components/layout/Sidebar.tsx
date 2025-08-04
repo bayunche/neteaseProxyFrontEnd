@@ -155,7 +155,7 @@ const Sidebar: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {playlists.map((playlist, index) => (
+                    {playlists.map((playlist) => (
                       <div key={playlist.id}>
                         <button
                           onClick={() => handlePlaylistClick(playlist.id)}

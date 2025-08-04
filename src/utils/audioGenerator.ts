@@ -2,6 +2,11 @@
  * 音频生成器 - 用于生成测试音频
  */
 
+// 扩展Window接口以支持webkit前缀
+interface ExtendedWindow extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 export interface GeneratedAudioOptions {
   frequency: number;
   duration: number;
@@ -22,7 +27,7 @@ export const generateTestAudio = (options: Partial<GeneratedAudioOptions> = {}):
 
   try {
     // 创建音频上下文
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = new (window.AudioContext || (window as ExtendedWindow).webkitAudioContext)();
     const sampleRate = audioContext.sampleRate;
     const numSamples = sampleRate * duration;
 
@@ -134,7 +139,7 @@ export const generateTestSounds = () => {
  */
 export const generateFrequencySweep = (startFreq: number, endFreq: number, duration: number): string => {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = new (window.AudioContext || (window as ExtendedWindow).webkitAudioContext)();
     const sampleRate = audioContext.sampleRate;
     const numSamples = sampleRate * duration;
     const buffer = audioContext.createBuffer(1, numSamples, sampleRate);
@@ -176,6 +181,6 @@ export const checkAudioSupport = () => {
     wav: audio.canPlayType('audio/wav') !== '',
     ogg: audio.canPlayType('audio/ogg') !== '',
     aac: audio.canPlayType('audio/aac') !== '',
-    webAudioAPI: !!(window.AudioContext || (window as any).webkitAudioContext)
+    webAudioAPI: !!(window.AudioContext || (window as ExtendedWindow).webkitAudioContext)
   };
 };

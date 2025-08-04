@@ -4,7 +4,6 @@ import {
   Play, 
   Pause, 
   Heart, 
-  Download, 
   Share2, 
   MoreHorizontal,
   Clock,
@@ -32,8 +31,6 @@ const PlaylistDetailPage: React.FC = () => {
 
   const {
     player,
-    queue,
-    user,
     play,
     pause,
     addToQueue,
