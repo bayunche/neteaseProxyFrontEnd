@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "react-window": "^1.8.8",
+    "react-window-infinite-loader": "^1.0.9"
+  },
+  "devDependencies": {
+    "@types/react-window": "^1.8.8",
+    "@types/react-window-infinite-loader": "^1.0.9"
+  }
+}

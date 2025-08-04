@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, 
   Search, 
@@ -10,13 +10,29 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  Library,
+  Settings
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
+import { navigationItems } from '../../router';
+
+// 图标映射
+const iconMap = {
+  Home,
+  Search,
+  Heart,
+  Clock,
+  Music,
+  Library,
+  BarChart: BarChart3,
+  Settings
+};
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { ui, user, toggleSidebar, loadUserPlaylists } = usePlayerStore();
   const { sidebarCollapsed } = ui;
   const { playlists, isLoggedIn } = user;
@@ -34,13 +50,13 @@ const Sidebar: React.FC = () => {
     }
   }, [isLoggedIn, loadUserPlaylists, playlists.length]);
 
-  const navigationItems = [
-    { id: 'home', label: '发现音乐', icon: Home, active: true, path: '/' },
-    { id: 'search', label: '搜索', icon: Search, path: '/search' },
-    { id: 'favorites', label: '我的收藏', icon: Heart, path: '/favorites' },
-    { id: 'recent', label: '最近播放', icon: Clock, path: '/recent' },
-    { id: 'stats', label: '播放统计', icon: BarChart3, path: '/stats' },
-  ];
+  // 检查当前路径是否激活
+  const isActiveRoute = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <>
@@ -71,25 +87,30 @@ const Sidebar: React.FC = () => {
           {/* Navigation - Fixed */}
           <div className="flex-shrink-0 px-2 py-4 border-b border-gray-200 dark:border-gray-700">
             <ul className="space-y-1">
-              {navigationItems.map((item) => (
-                <li key={item.id}>
-                  <button
-                    onClick={() => navigate(item.path)}
-                    className={cn(
-                      'w-full flex items-center px-3 py-3 rounded-lg transition-colors text-left',
-                      'hover:bg-gray-100 dark:hover:bg-gray-800',
-                      item.active 
-                        ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
-                        : 'text-gray-700 dark:text-gray-300'
-                    )}
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {!sidebarCollapsed && (
-                      <span className="ml-3 font-medium">{item.label}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
+              {navigationItems.map((item) => {
+                const IconComponent = iconMap[item.icon as keyof typeof iconMap] || Home;
+                const isActive = isActiveRoute(item.path);
+                
+                return (
+                  <li key={item.path}>
+                    <button
+                      onClick={() => navigate(item.path)}
+                      className={cn(
+                        'w-full flex items-center px-3 py-3 rounded-lg transition-colors text-left',
+                        'hover:bg-gray-100 dark:hover:bg-gray-800',
+                        isActive 
+                          ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+                          : 'text-gray-700 dark:text-gray-300'
+                      )}
+                    >
+                      <IconComponent className="w-5 h-5 flex-shrink-0" />
+                      {!sidebarCollapsed && (
+                        <span className="ml-3 font-medium">{item.title}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
             

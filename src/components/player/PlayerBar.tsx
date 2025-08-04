@@ -30,8 +30,7 @@ const PlayerBar: React.FC = () => {
     setVolume, 
     toggleMute,
     setPlayMode,
-    toggleQueue,
-    toggleLyrics
+    toggleQueue
   } = usePlayerStore();
   
   const { 
@@ -44,7 +43,7 @@ const PlayerBar: React.FC = () => {
     playMode 
   } = player;
   
-  const { showQueue, showLyrics } = ui;
+  const { showQueue } = ui;
 
   const handlePlayPause = () => {
     if (isPlaying) {
@@ -166,12 +165,14 @@ const PlayerBar: React.FC = () => {
             </button>
             
             <button
-              onClick={toggleLyrics}
-              className={cn(
-                'p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors',
-                showLyrics && 'bg-gray-100 dark:bg-gray-800'
-              )}
-              title="歌词显示"
+              onClick={() => {
+                if (currentSong) {
+                  navigate('/lyrics');
+                }
+              }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              title="查看歌词"
+              disabled={!currentSong}
             >
               <Type className="w-4 h-4" />
             </button>

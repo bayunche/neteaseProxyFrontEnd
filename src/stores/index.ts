@@ -230,8 +230,22 @@ export const usePlayerStore = create<AppState & AppActions>()(
   devtools(
     persist(
       (set, get) => {
+        // 事件监听器清理函数集合
+        const eventCleanupFunctions: Array<() => void> = [];
+        
         // 设置音频服务事件监听
-        audioService.onStateChange((audioState: any) => {
+        const audioStateUnsubscribe = audioService.onStateChange((audioState: {
+          currentSong: Song | null;
+          isPlaying: boolean;
+          isPaused: boolean;
+          isLoading: boolean;
+          currentTime: number;
+          duration: number;
+          volume: number;
+          isMuted: boolean;
+          playbackState: PlaybackState;
+          error: string | null;
+        }) => {
           set((state) => ({
             player: {
               ...state.player,
@@ -248,9 +262,10 @@ export const usePlayerStore = create<AppState & AppActions>()(
             }
           }));
         });
+        eventCleanupFunctions.push(audioStateUnsubscribe);
 
         // 监听队列变化
-        audioService.on('queuechange', (queue: any) => {
+        const queueChangeUnsubscribe = audioService.on('queuechange', (queue: { songs: Song[]; currentIndex: number }) => {
           set((state) => ({
             queue: {
               ...state.queue,
@@ -259,6 +274,22 @@ export const usePlayerStore = create<AppState & AppActions>()(
             }
           }));
         });
+        eventCleanupFunctions.push(queueChangeUnsubscribe);
+        
+        // 监听队列播放完成
+        const queueCompleteUnsubscribe = audioService.on('queuecomplete', () => {
+          console.log('队列播放完成，可以点击播放按钮从头开始');
+        });
+        eventCleanupFunctions.push(queueCompleteUnsubscribe);
+        
+        // 在window对象上存储清理函数，供调试和手动清理使用
+        if (typeof window !== 'undefined') {
+          (window as any).__audioEventCleanup = () => {
+            console.log('清理音频事件监听器:', eventCleanupFunctions.length, '个');
+            eventCleanupFunctions.forEach(cleanup => cleanup());
+            eventCleanupFunctions.length = 0; // 清空数组
+          };
+        }
 
         // 初始化时恢复播放状态
         const initializePersistedState = () => {
@@ -305,40 +336,52 @@ export const usePlayerStore = create<AppState & AppActions>()(
         // Player actions implementation
         play: async (song?: Song) => {
           const state = get();
-          const targetSong = song || state.player.currentSong;
-          
-          if (!targetSong) {
-            // 如果没有指定歌曲，尝试从队列播放
-            await audioService.play();
-            return;
-          }
           
           try {
-            // 检查歌曲是否已在队列中
-            const currentQueue = audioService.getQueue();
-            const existingIndex = currentQueue.songs.findIndex((s: any) => s.id === targetSong.id);
-            
-            if (existingIndex >= 0) {
-              // 如果歌曲已在队列中，直接播放该位置
-              await audioService.playFromQueue(existingIndex);
+            if (song) {
+              // 如果指定了歌曲，直接播放
+              const currentQueue = audioService.getQueue();
+              const existingIndex = currentQueue.songs.findIndex((s: any) => s.id === song.id);
+              
+              if (existingIndex >= 0) {
+                // 如果歌曲已在队列中，直接播放该位置
+                await audioService.playFromQueue(existingIndex);
+              } else {
+                // 如果歌曲不在队列中，添加到队列并播放
+                audioService.addToQueue(song);
+                const newQueue = audioService.getQueue();
+                const newIndex = newQueue.songs.length - 1;
+                await audioService.playFromQueue(newIndex);
+              }
+              
+              // 自动加载歌词
+              get().loadLyrics(String(song.id));
+              
+              // 记录播放统计
+              statsService.onSongChange(song, 'manual');
+              
+              // 更新最近播放
+              get().updateRecentPlayed(song);
             } else {
-              // 如果歌曲不在队列中，添加到队列并播放
-              audioService.addToQueue(targetSong);
-              const newQueue = audioService.getQueue();
-              const newIndex = newQueue.songs.length - 1;
-              await audioService.playFromQueue(newIndex);
+              // 没有指定歌曲，使用智能播放逻辑
+              await audioService.play();
+              
+              // 获取当前播放的歌曲
+              const currentSong = audioService.getCurrentSong();
+              if (currentSong) {
+                get().loadLyrics(String(currentSong.id));
+                statsService.onSongChange(currentSong, 'auto');
+                get().updateRecentPlayed(currentSong);
+              }
             }
-            
-            // 自动加载歌词
-            get().loadLyrics(String(targetSong.id));
-            
-            // 记录播放统计
-            statsService.onSongChange(targetSong, 'manual');
-            
-            // 更新最近播放
-            get().updateRecentPlayed(targetSong);
           } catch (error) {
             console.error('播放失败:', error);
+            set((state) => ({
+              player: {
+                ...state.player,
+                error: (error as Error).message
+              }
+            }));
           }
         },
         
@@ -355,11 +398,26 @@ export const usePlayerStore = create<AppState & AppActions>()(
         },
         
         next: async () => {
-          await audioService.playNext();
+          try {
+            const hasNext = await audioService.playNext();
+            if (!hasNext) {
+              // 如果没有下一首，根据播放模式决定行为
+              const queue = audioService.getQueue();
+              if (queue.mode === 'list_loop' && queue.songs.length > 0) {
+                await audioService.playFromQueue(0); // 循环到第一首
+              }
+            }
+          } catch (error) {
+            console.error('播放下一首失败:', error);
+          }
         },
         
         previous: async () => {
-          await audioService.playPrevious();
+          try {
+            await audioService.playPrevious();
+          } catch (error) {
+            console.error('播放上一首失败:', error);
+          }
         },
         
         setVolume: (volume: number) => {
@@ -430,20 +488,35 @@ export const usePlayerStore = create<AppState & AppActions>()(
         
         clearQueue: () => {
           audioService.clearQueue();
-          // Store状态会通过audioService的queuechange事件自动更新
+          // 清空队列后重置播放状态
+          set((state) => ({
+            player: {
+              ...state.player,
+              currentSong: null,
+              isPlaying: false,
+              isPaused: false,
+              playbackState: 'idle'
+            }
+          }));
         },
         
         shuffleQueue: () => {
-          set((state) => {
-            const shuffled = [...state.queue.songs].sort(() => Math.random() - 0.5);
-            return {
-              queue: {
-                ...state.queue,
-                songs: shuffled,
-                currentIndex: 0
-              }
-            };
-          });
+          const state = get();
+          if (state.queue.songs.length <= 1) return;
+          
+          const currentSong = state.player.currentSong;
+          const shuffled = [...state.queue.songs].sort(() => Math.random() - 0.5);
+          
+          // 如果有当前播放的歌曲，确保它在第一位
+          if (currentSong) {
+            const currentIndex = shuffled.findIndex(s => s.id === currentSong.id);
+            if (currentIndex > 0) {
+              [shuffled[0], shuffled[currentIndex]] = [shuffled[currentIndex], shuffled[0]];
+            }
+          }
+          
+          // 更新 AudioService 的队列
+          audioService.setQueue(shuffled, 0);
         },
         
         moveInQueue: (fromIndex: number, toIndex: number) => {
@@ -479,10 +552,22 @@ export const usePlayerStore = create<AppState & AppActions>()(
             
             // 自动加载歌词
             get().loadLyrics(String(songs[0].id));
+            
+            // 记录播放统计
+            statsService.onSongChange(songs[0], 'playlist');
+            
+            // 更新最近播放
+            get().updateRecentPlayed(songs[0]);
 
             logger.info(`开始播放歌曲列表: ${songs.length}首歌曲`);
           } catch (error) {
             logger.error('播放歌曲列表失败:', error);
+            set((state) => ({
+              player: {
+                ...state.player,
+                error: '播放列表失败'
+              }
+            }));
           }
         },
         
@@ -581,7 +666,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
           }));
         },
 
-        // 加载歌单详情
+        // 加载歌单详情（增强版）
         loadPlaylistDetail: async (playlistId: string): Promise<Playlist | null> => {
           if (!playlistId) {
             logger.warn('歌单ID不能为空');
@@ -590,20 +675,52 @@ export const usePlayerStore = create<AppState & AppActions>()(
 
           try {
             logger.info(`开始加载歌单详情: ${playlistId}`);
-            const playlist = await PlaylistAPI.getPlaylistDetail({ id: playlistId });
             
-            // 更新store中的歌单信息（如果存在）
-            set((state) => ({
-              user: {
-                ...state.user,
-                playlists: state.user.playlists.map(p => 
-                  p.id === playlistId ? { ...p, ...playlist } : p
-                )
-              }
-            }));
+            // 尝试使用增强版API
+            try {
+              const { EnhancedPlaylistAPI } = await import('../services/api/PlaylistAPI.enhanced');
+              const enhancedPlaylist = await EnhancedPlaylistAPI.getPlaylistWithPagination(
+                { id: playlistId }, 
+                100 // 初始加载100首歌曲
+              );
+              
+              // 转换为标准格式
+              const playlist: Playlist = {
+                ...enhancedPlaylist,
+                songs: enhancedPlaylist.songs
+              };
+              
+              // 更新store中的歌单信息（如果存在）
+              set((state) => ({
+                user: {
+                  ...state.user,
+                  playlists: state.user.playlists.map(p => 
+                    p.id === playlistId ? { ...p, ...playlist } : p
+                  )
+                }
+              }));
 
-            logger.info(`加载歌单详情成功: "${playlist.title}", ${playlist.songs.length}首歌曲`);
-            return playlist;
+              logger.info(`加载增强歌单详情成功: "${playlist.title}", ${playlist.songs.length}首歌曲, 总计${enhancedPlaylist.trackCount}首`);
+              return playlist;
+            } catch (enhancedError) {
+              logger.warn('增强版API失败，回退到标准API', enhancedError);
+              
+              // 回退到原有API
+              const playlist = await PlaylistAPI.getPlaylistDetail({ id: playlistId });
+              
+              // 更新store中的歌单信息（如果存在）
+              set((state) => ({
+                user: {
+                  ...state.user,
+                  playlists: state.user.playlists.map(p => 
+                    p.id === playlistId ? { ...p, ...playlist } : p
+                  )
+                }
+              }));
+
+              logger.info(`加载标准歌单详情成功: "${playlist.title}", ${playlist.songs.length}首歌曲`);
+              return playlist;
+            }
           } catch (error) {
             logger.error('加载歌单详情失败', error);
             return null;

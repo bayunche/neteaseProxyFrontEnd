@@ -1,12 +1,6 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/layout/Layout';
-import HomePage from './pages/HomePage';
-import PlaylistDetailPage from './pages/PlaylistDetailPage';
-import LyricsPage from './pages/LyricsPage';
-import StatsPage from './pages/StatsPage';
-import RecentPage from './pages/RecentPage';
 import { usePlayerStore } from './stores';
+import WebRouter from './router/WebRouter';
 
 function App() {
   const { checkLoginStatus } = usePlayerStore();
@@ -16,19 +10,16 @@ function App() {
     checkLoginStatus();
   }, [checkLoginStatus]);
 
-  return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/playlist/:playlistId" element={<PlaylistDetailPage />} />
-          <Route path="/lyrics" element={<LyricsPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/recent" element={<RecentPage />} />
-        </Routes>
-      </Layout>
-    </Router>
-  );
+  // 检测平台类型
+  const platform = typeof window !== 'undefined' && window.navigator?.userAgent ? 'web' : 'web';
+  
+  // 根据平台返回对应的路由组件
+  // 目前只实现Web版本，Mobile版本将在React Native项目中实现
+  switch (platform) {
+    case 'web':
+    default:
+      return <WebRouter />;
+  }
 }
 
 export default App;

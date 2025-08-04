@@ -45,8 +45,11 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
   const handlePlayPause = () => {
     if (isPlaying) {
       pause();
-    } else if (currentSong) {
-      play(currentSong);
+    } else {
+      // 播放队列的播放按钮：始终从队列第一首开始播放
+      if (songs.length > 0) {
+        play(songs[0]);
+      }
     }
   };
 
@@ -78,6 +81,11 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {songs.length} 首歌曲 • {totalMinutes} 分钟
+              {currentIndex >= 0 && (
+                <span className="ml-2 text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                  第 {currentIndex + 1} 首
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -108,7 +116,7 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
             ) : (
               <>
                 <Play className="w-4 h-4" />
-                <span>播放</span>
+                <span>播放全部</span>
               </>
             )}
           </button>
