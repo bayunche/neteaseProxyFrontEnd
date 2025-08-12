@@ -1,0 +1,47 @@
+{
+    "name": "SSE Stream Output",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "stream-test",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "Webhook_1",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "const res = $respondToWebhook();\n\nres.writeHead(200, {\n  'Content-Type': 'text/event-stream',\n  'Cache-Control': 'no-cache',\n  'Connection': 'keep-alive'\n});\n\nfunction send(data) {\n  res.write(`data: ${JSON.stringify(data)}\\\\n\\\\n`);\n}\n\nasync function run() {\n  send({ step: 1, msg: \"任务启动\" });\n  await new Promise(r => setTimeout(r, 1000));\n\n  send({ step: 2, msg: \"正在处理数据\" });\n  await new Promise(r => setTimeout(r, 1000));\n\n  send({ step: 3, msg: \"调用AI生成内容\" });\n  await new Promise(r => setTimeout(r, 1000));\n\n  send({ step: 4, msg: \"任务完成！\" });\n  res.end();\n}\n\nawait run();\n\nreturn [];"
+            },
+            "id": "Function_1",
+            "name": "Function (SSE)",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 2,
+            "position": [
+                500,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook_1": {
+            "main": [
+                [
+                    {
+                        "node": "Function (SSE)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    ],
+    "active": false
+}
