@@ -4,6 +4,7 @@ import { usePlayerStore } from '../stores';
 import { cn } from '../utils/cn';
 import SongList from '../components/music/SongList';
 import PlaylistCard from '../components/playlist/PlaylistCard';
+import type { Song } from '../types';
 
 const LibraryPage: React.FC = () => {
   const {
@@ -112,7 +113,7 @@ const LibraryPage: React.FC = () => {
                   <PlaylistCard
                     key={playlist.id}
                     playlist={playlist}
-                    viewMode={viewMode}
+                    variant={viewMode === 'grid' ? 'card' : 'compact'}
                   />
                 ))}
               </div>

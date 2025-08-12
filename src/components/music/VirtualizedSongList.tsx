@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import { 
   Play, 
@@ -16,11 +16,11 @@ interface VirtualizedSongListProps {
   songs: Song[];
   totalCount: number;
   hasMore: boolean;
-  onLoadMore: (startIndex: number, stopIndex: number) => Promise<void>;
-  onSongClick: (song: Song, index: number) => void;
+  onLoadMore: (startIndex: number, stopIndex?: number) => Promise<void>;
+  onSongClick: (song: Song, index?: number) => void;
   isLoading?: boolean;
   className?: string;
-  height?: number;
+  height?: number | string;
 }
 
 interface SongItemData {
@@ -28,12 +28,12 @@ interface SongItemData {
   favorites: Song[];
   currentSong: Song | null;
   isPlaying: boolean;
-  onSongClick: (song: Song, index: number) => void;
+  onSongClick: (song: Song, index?: number) => void;
   onToggleFavorite: (song: Song, e: React.MouseEvent) => void;
   onAddToQueue: (song: Song, e: React.MouseEvent) => void;
 }
 
-const ITEM_HEIGHT = 72; // 每个歌曲项的高度
+const ITEM_HEIGHT = 64; // 每个歌曲项的高度
 
 const SongItem: React.FC<ListChildComponentProps<SongItemData>> = ({ 
   index, 
@@ -185,7 +185,11 @@ const VirtualizedSongList: React.FC<VirtualizedSongListProps> = ({
   height = 600
 }) => {
   const listRef = useRef<List>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [loadingRange, setLoadingRange] = useState<{ start: number; end: number } | null>(null);
+  const [containerHeight, setContainerHeight] = useState<number>(
+    typeof height === 'number' ? height - 60 : 440 // 减去header高度60px
+  );
 
   const {
     player,
@@ -198,13 +202,43 @@ const VirtualizedSongList: React.FC<VirtualizedSongListProps> = ({
   const { currentSong, isPlaying } = player;
   const { favorites } = user;
 
+  // 监听容器高度变化
+  useEffect(() => {
+    if (typeof height === 'string' && containerRef.current) {
+      const updateHeight = () => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          // 计算可用高度：容器高度减去header高度(60px)
+          const availableHeight = Math.max(300, rect.height - 60);
+          setContainerHeight(availableHeight);
+          console.log('容器高度更新:', rect.height, '可用高度:', availableHeight);
+        }
+      };
+
+      // 使用定时器延迟计算，确保DOM完全渲染
+      const timer = setTimeout(updateHeight, 100);
+
+      const resizeObserver = new ResizeObserver(() => {
+        setTimeout(updateHeight, 10);
+      });
+      resizeObserver.observe(containerRef.current);
+
+      return () => {
+        clearTimeout(timer);
+        resizeObserver.disconnect();
+      };
+    } else if (typeof height === 'number') {
+      setContainerHeight(height - 60); // 固定高度也要减去header
+    }
+  }, [height]);
+
   // 处理收藏切换
   const handleToggleFavorite = useCallback((song: Song, e: React.MouseEvent) => {
     e.stopPropagation();
     const isFavorite = favorites.some(fav => fav.id === song.id);
     
     if (isFavorite) {
-      removeFromFavorites(song.id);
+      removeFromFavorites(String(song.id));
     } else {
       addToFavorites(song);
     }
@@ -248,7 +282,11 @@ const VirtualizedSongList: React.FC<VirtualizedSongListProps> = ({
   const itemCount = hasMore ? totalCount : songs.length;
 
   return (
-    <div className={cn("bg-white dark:bg-gray-800 rounded-lg overflow-hidden", className)}>
+    <div 
+      ref={containerRef}
+      className={cn("bg-white dark:bg-gray-800 rounded-lg overflow-hidden", className)}
+      style={{ height: typeof height === 'number' ? height : '100%' }}
+    >
       {/* 列表头部 */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -260,7 +298,7 @@ const VirtualizedSongList: React.FC<VirtualizedSongListProps> = ({
       </div>
 
       {/* 虚拟化列表 */}
-      <div className="relative">
+      <div className="relative" style={{ height: `${containerHeight}px` }}>
         <InfiniteLoader
           isItemLoaded={isItemLoaded}
           itemCount={itemCount}
@@ -273,7 +311,8 @@ const VirtualizedSongList: React.FC<VirtualizedSongListProps> = ({
                 listRef.current = list;
                 ref(list);
               }}
-              height={height}
+              height={containerHeight}
+              width="100%"
               itemCount={itemCount}
               itemSize={ITEM_HEIGHT}
               itemData={itemData}

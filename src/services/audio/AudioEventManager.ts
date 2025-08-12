@@ -1,6 +1,6 @@
 import type { AudioEvent } from '../../types';
 
-export type AudioEventCallback = (data?: any) => void;
+export type AudioEventCallback = (data?: unknown) => void;
 
 export interface AudioEventSubscription {
   event: AudioEvent;
@@ -63,7 +63,7 @@ export class AudioEventManager {
   /**
    * 发布事件
    */
-  emit(event: AudioEvent, data?: any): void {
+  emit(event: AudioEvent, data?: unknown): void {
     // 执行普通订阅
     const callbacks = this.subscriptions.get(event);
     if (callbacks) {

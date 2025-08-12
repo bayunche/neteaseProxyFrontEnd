@@ -103,8 +103,15 @@ export class AudioService {
       },
       
       onError: (error) => {
-        this.updateState({ error, isPlaying: false, isPaused: false });
-        this.eventManager.emit('error', error);
+        console.error('AudioEngine错误:', error);
+        const errorMessage = this.formatError(error);
+        this.updateState({ 
+          error: errorMessage, 
+          isPlaying: false, 
+          isPaused: false,
+          playbackState: 'error'
+        });
+        this.eventManager.emit('error', errorMessage);
       },
       
       onSongEnd: () => {
@@ -172,40 +179,54 @@ export class AudioService {
   private async handleSongEnd(): Promise<void> {
     this.eventManager.emit('ended');
     
-    // 根据播放模式决定下一步行动
-    switch (this.queue.mode) {
-      case 'single':
-        // 单曲循环
-        await this.restart();
-        break;
-      case 'list_loop': {
-        // 列表循环
-        const hasNextInLoop = await this.playNext();
-        if (!hasNextInLoop) {
-          await this.playFirst();
+    try {
+      // 根据播放模式决定下一步行动
+      switch (this.queue.mode) {
+        case 'single':
+          // 单曲循环
+          await this.restart();
+          break;
+        case 'list_loop': {
+          // 列表循环
+          const hasNextInLoop = await this.playNext();
+          if (!hasNextInLoop) {
+            await this.playFirst();
+          }
+          break;
         }
-        break;
-      }
-      case 'sequence': {
-        // 顺序播放 - 如果没有下一首，标记为播放完成但不停止
-        const hasNext = await this.playNext();
-        if (!hasNext) {
-          // 播放完成，重置到队列开头但不自动播放
-          this.queue.currentIndex = 0;
-          this.updateState({ 
-            isPlaying: false, 
-            isPaused: true,
-            playbackState: 'paused',
-            queueCompleted: true
-          });
-          this.eventManager.emit('queuecomplete');
+        case 'sequence': {
+          // 顺序播放 - 如果没有下一首，标记为播放完成但不停止
+          const hasNext = await this.playNext();
+          if (!hasNext) {
+            // 播放完成，重置到队列开头但不自动播放
+            this.queue.currentIndex = 0;
+            this.updateState({ 
+              isPlaying: false, 
+              isPaused: true,
+              playbackState: 'paused',
+              queueCompleted: true,
+              error: null // 清除错误状态
+            });
+            this.eventManager.emit('queuecomplete');
+          }
+          break;
         }
-        break;
+        case 'random':
+          // 随机播放
+          await this.playRandom();
+          break;
+        default:
+          console.warn('未知的播放模式:', this.queue.mode);
+          break;
       }
-      case 'random':
-        // 随机播放
-        await this.playRandom();
-        break;
+    } catch (error) {
+      console.error('处理歌曲结束事件失败:', error);
+      this.updateState({
+        error: `播放结束处理失败: ${(error as Error).message}`,
+        isPlaying: false,
+        isPaused: true,
+        playbackState: 'error'
+      });
     }
   }
 
@@ -223,12 +244,9 @@ export class AudioService {
       // 尝试加载歌曲，如果失败则尝试后备方案
       await this.loadSongWithFallback(song);
       
-      // 预加载下一首歌曲
+      // 预加载下一首歌曲（包括播放URL）
       if (this.config.enablePreload) {
-        const nextSong = this.getNextSong();
-        if (nextSong) {
-          this.engine.preloadNext(nextSong);
-        }
+        this.preloadNextSong();
       }
 
       this.updateState({ currentSong: song });
@@ -252,23 +270,48 @@ export class AudioService {
       // 如果歌曲没有音频URL或者是来自API的歌曲，先获取播放URL
       let songToLoad = song;
       
-      if (!song.audioUrl || song.source === 'api') {
+      // 优化：检查是否已经缓存了播放URL
+      const cachedSong = this.findSongInQueue(String(song.id));
+      if (cachedSong?.audioUrl && cachedSong.audioUrl !== song.audioUrl) {
+        console.log('使用缓存的播放URL:', cachedSong.audioUrl);
+        songToLoad = {
+          ...song,
+          audioUrl: cachedSong.audioUrl
+        };
+      } else if (!song.audioUrl || song.source === 'api') {
         console.log('获取歌曲播放URL:', song.name || song.title);
-        try {
-          const playUrl = await SongAPI.getSongUrl(song.id);
-          if (playUrl) {
-            songToLoad = {
-              ...song,
-              audioUrl: playUrl
-            };
-            console.log('成功获取播放URL:', playUrl);
-          } else {
-            throw new Error('无法获取播放URL');
+        
+        // 重试机制：最多重试3次
+        let retryCount = 0;
+        const maxRetries = 3;
+        let playUrl = null;
+        
+        while (retryCount < maxRetries && !playUrl) {
+          try {
+            playUrl = await SongAPI.getSongUrl(Number(song.id));
+            if (playUrl) {
+              console.log(`成功获取播放URL (第${retryCount + 1}次尝试):`, playUrl);
+              break;
+            }
+          } catch (apiError) {
+            retryCount++;
+            console.warn(`第${retryCount}次获取播放URL失败:`, apiError);
+            
+            if (retryCount < maxRetries) {
+              // 等待 1 秒后重试
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
           }
-        } catch (apiError) {
-          console.warn('API获取播放URL失败:', apiError);
-          throw apiError;
         }
+        
+        if (!playUrl) {
+          throw new Error(`无法获取播放URL（重试${maxRetries}次后失败）`);
+        }
+        
+        songToLoad = {
+          ...song,
+          audioUrl: playUrl
+        };
       }
 
       // 尝试加载音频
@@ -276,7 +319,7 @@ export class AudioService {
       
       // 如果成功获取了新的audioUrl，更新队列中的歌曲信息以便缓存
       if (songToLoad.audioUrl !== song.audioUrl) {
-        this.updateSongInQueue(song.id, { audioUrl: songToLoad.audioUrl });
+        this.updateSongInQueue(String(song.id), { audioUrl: songToLoad.audioUrl });
       }
     } catch (error) {
       console.warn('加载原始音频失败，尝试后备方案:', error);
@@ -286,7 +329,7 @@ export class AudioService {
         const { generateTestAudio } = await import('../../utils/audioGenerator');
         const fallbackAudio = generateTestAudio({
           frequency: 440,
-          duration: song.duration || 30000, // 转换为毫秒
+          duration: song.duration || 30000,
           waveType: 'sine'
         });
         
@@ -298,11 +341,12 @@ export class AudioService {
         
         await this.engine.loadSong(fallbackSong);
         this.updateState({ 
-          error: '原音频加载失败，使用生成的后备音频' 
+          error: `原音频加载失败: ${(error as Error).message}，使用生成的后备音频` 
         });
-      } catch {
-        // 如果后备方案也失败，抛出原始错误
-        throw error;
+      } catch (fallbackError) {
+        // 如果后备方案也失败，抛出更详细的错误信息
+        const detailedError = new Error(`加载歌曲失败: ${(error as Error).message}, 后备音频也失败: ${(fallbackError as Error).message}`);
+        throw detailedError;
       }
     }
   }
@@ -313,44 +357,45 @@ export class AudioService {
       this.updateState({ 
         error: '播放队列为空，请添加歌曲',
         isPlaying: false,
-        isPaused: false 
+        isPaused: false,
+        playbackState: 'idle'
       });
       return;
     }
     
     try {
-      if (this.state.currentSong && this.engine.getState() === 'paused') {
+      // 优化：更精确的继续播放判断
+      if (this.state.currentSong && 
+          (this.engine.getState() === 'paused' || this.state.isPaused) && 
+          !this.state.queueCompleted) {
         // 如果有当前歌曲且是暂停状态，继续播放
         console.log('继续播放当前歌曲:', this.state.currentSong.title);
         await this.engine.play();
         this.eventManager.emit('play', this.state.currentSong);
-      } else {
-        // 智能选择播放位置
-        let playIndex = this.queue.currentIndex;
-        
-        // 如果currentIndex无效，从头开始
-        if (playIndex < 0 || playIndex >= this.queue.songs.length) {
-          console.log(`无效的播放索引 ${playIndex}，从头开始`);
-          playIndex = 0;
-        }
-        
-        // 如果队列已播放完成或当前歌曲已结束，从头开始
-        if (this.state.queueCompleted || 
-            this.engine.getState() === 'ended' || 
-            (!this.state.currentSong && this.queue.songs.length > 0)) {
-          console.log('队列播放状态重置，从头开始');
-          playIndex = 0;
-          this.updateState({ queueCompleted: false }); // 重置完成状态
-        }
-        
-        await this.playFromQueue(playIndex);
+        return;
       }
+      
+      // 智能选择播放位置
+      let playIndex = this.queue.currentIndex;
+      
+      // 优化的播放位置选择逻辑
+      if (this.shouldResetQueue()) {
+        console.log('检测到需要重置队列，从头开始');
+        playIndex = 0;
+        this.updateState({ queueCompleted: false });
+      } else if (playIndex < 0 || playIndex >= this.queue.songs.length) {
+        console.log(`无效的播放索引 ${playIndex}，从头开始`);
+        playIndex = 0;
+      }
+      
+      await this.playFromQueue(playIndex);
     } catch (error) {
       console.error('播放失败:', error);
       this.updateState({ 
         error: `播放失败: ${(error as Error).message}`,
         isPlaying: false,
-        isPaused: false 
+        isPaused: false,
+        playbackState: 'error'
       });
     }
   }
@@ -497,18 +542,9 @@ export class AudioService {
     
     console.log(`播放模式切换: ${oldMode} -> ${mode}`);
     
-    // 切换模式时的特殊处理
+    // 优化切换模式时的特殊处理
     if (oldMode !== mode) {
-      // 从单曲循环切换到其他模式时，可能需要停止当前的循环播放
-      if (oldMode === 'single' && mode !== 'single' && this.state.playbackState === 'ended') {
-        console.log('从单曲循环模式切换，重置播放状态');
-        this.updateState({ 
-          playbackState: 'paused',
-          queueCompleted: false 
-        });
-      }
-      
-      // 更新播放能力状态
+      this.handlePlayModeChange(oldMode, mode);
       this.updatePlaybackCapabilities();
     }
     
@@ -623,33 +659,131 @@ export class AudioService {
       index = Math.max(0, Math.min(index, this.queue.songs.length - 1));
       console.log(`自动修正索引到: ${index}`);
     }
+
+    const song = this.queue.songs[index];
+    this.queue.currentIndex = index;
     
+    console.log(`开始播放队列歌曲: "${song.title}" (索引: ${index}/${this.queue.songs.length - 1})`);
+
     try {
-      this.queue.currentIndex = index;
-      this.updateState({ 
-        queueCompleted: false,
-        error: null // 清除之前的错误
-      });
-      this.eventManager.emit('queuechange', this.queue);
-      
-      const song = this.queue.songs[index];
-      console.log(`从队列播放: "${song.title}" (索引 ${index})`);
       await this.playSong(song);
     } catch (error) {
-      console.error(`从队列播放失败 (索引 ${index}):`, error);
-      this.updateState({ error: `播放失败: ${(error as Error).message}` });
+      console.error('播放队列歌曲失败:', error);
+      this.updateState({ 
+        error: `播放失败: ${(error as Error).message}`,
+        isPlaying: false,
+        isPaused: false 
+      });
+      throw error;
     }
   }
 
-  // 辅助方法
+  // 辅助方法：在队列中查找歌曲
+  private findSongInQueue(songId: string): Song | undefined {
+    return this.queue.songs.find(s => s.id === songId);
+  }
 
+  // 辅助方法：更新队列中的歌曲信息
   private updateSongInQueue(songId: string, updates: Partial<Song>): void {
-    const songIndex = this.queue.songs.findIndex(s => s.id === songId);
-    if (songIndex >= 0) {
-      this.queue.songs[songIndex] = { ...this.queue.songs[songIndex], ...updates };
-      console.log(`更新队列中歌曲 "${this.queue.songs[songIndex].title}" 的信息:`, updates);
-      this.eventManager.emit('queuechange', this.queue);
+    const index = this.queue.songs.findIndex(s => s.id === songId);
+    if (index >= 0) {
+      this.queue.songs[index] = {
+        ...this.queue.songs[index],
+        ...updates
+      };
+      console.log(`更新队列歌曲信息: "${this.queue.songs[index].title}"`);
     }
+  }
+
+  // 预加载下一首歌曲（包括播放URL）
+  private async preloadNextSong(): Promise<void> {
+    const nextSong = this.getNextSong();
+    if (!nextSong) return;
+
+    console.log('开始预加载下一首歌曲:', nextSong.title);
+
+    try {
+      // 预加载音频引擎
+      this.engine.preloadNext(nextSong);
+
+      // 如果下一首歌曲没有播放URL，后台获取
+      if (!nextSong.audioUrl || nextSong.source === 'api') {
+        SongAPI.getSongUrl(Number(nextSong.id))
+          .then(playUrl => {
+            if (playUrl) {
+              this.updateSongInQueue(String(nextSong.id), { audioUrl: playUrl });
+              console.log('预加载播放URL成功:', nextSong.title);
+            }
+          })
+          .catch(error => {
+            console.warn('预加载播放URL失败:', nextSong.title, error);
+          });
+      }
+    } catch (error) {
+      console.warn('预加载下一首歌曲失败:', error);
+    }
+  }
+
+  // 判断是否需要重置队列播放状态
+  private shouldResetQueue(): boolean {
+    return this.state.queueCompleted || 
+           this.engine.getState() === 'ended' || 
+           (!this.state.currentSong && this.queue.songs.length > 0) ||
+           this.state.playbackState === 'error';
+  }
+
+  // 处理播放模式变化
+  private handlePlayModeChange(oldMode: PlayMode, newMode: PlayMode): void {
+    // 从单曲循环切换到其他模式时的特殊处理
+    if (oldMode === 'single' && newMode !== 'single' && this.state.playbackState === 'ended') {
+      console.log('从单曲循环模式切换，重置播放状态');
+      this.updateState({ 
+        playbackState: 'paused',
+        queueCompleted: false,
+        isPaused: true,
+        isPlaying: false
+      });
+    }
+
+    // 从随机模式切换时，可能需要重新预加载
+    if (oldMode === 'random' && newMode !== 'random' && this.config.enablePreload) {
+      this.preloadNextSong();
+    }
+  }
+
+  // 格式化错误信息
+  private formatError(error: string | Error): string {
+    if (typeof error === 'string') {
+      return error;
+    }
+    
+    if (error instanceof Error) {
+      // 针对常见错误类型提供用户友好的消息
+      if (error.message.includes('Network')) {
+        return '网络连接失败，请检查网络设置';
+      }
+      if (error.message.includes('decode')) {
+        return '音频文件格式不支持或已损坏';
+      }
+      if (error.message.includes('CORS')) {
+        return '跨域访问被阻止，请联系管理员';
+      }
+      if (error.message.includes('404')) {
+        return '音频文件不存在或已被删除';
+      }
+      if (error.message.includes('403')) {
+        return '没有访问权限，可能需要登录';
+      }
+      
+      return error.message;
+    }
+    
+    return '未知错误';
+  }
+
+  // 清除错误状态
+  clearError(): void {
+    this.updateState({ error: null });
   }
 
   private getNextSong(): Song | null {

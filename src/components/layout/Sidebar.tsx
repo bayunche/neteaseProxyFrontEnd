@@ -63,23 +63,39 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-16 h-[calc(100vh-8rem)] bg-white dark:bg-gray-900',
-          'border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-20',
-          sidebarCollapsed ? 'w-16' : 'w-64',
-          'max-md:hidden' // Hide on mobile, will use drawer instead
+          // 桌面端：正常flex布局
+          'md:h-full md:bg-white md:dark:bg-gray-900 md:flex-shrink-0',
+          'md:border-r md:border-gray-200 md:dark:border-gray-700',
+          'md:transition-all md:duration-300 md:ease-out',
+          // 桌面端尺寸
+          sidebarCollapsed ? 'md:w-16' : 'md:w-64',
+          // 移动端：抽屉模式（fixed定位）
+          'max-md:fixed max-md:left-0 max-md:top-16 max-md:h-[calc(100vh-8rem)]',
+          'max-md:bg-white max-md:dark:bg-gray-900 max-md:z-50',
+          'max-md:border-r max-md:border-gray-200 max-md:dark:border-gray-700',
+          'max-md:transition-transform max-md:duration-300 max-md:ease-out',
+          // 移动端显示隐藏控制
+          !sidebarCollapsed ? 'max-md:translate-x-0 max-md:w-64' : 'max-md:-translate-x-full max-md:w-64'
         )}
       >
         <div className="flex flex-col h-full">
           {/* Toggle button */}
-          <div className="flex-shrink-0 flex justify-end p-2 border-b border-gray-200 dark:border-gray-700">
+          <div className={cn(
+            "flex-shrink-0 flex p-2 border-b border-gray-200 dark:border-gray-700 transition-all duration-300",
+            sidebarCollapsed ? "justify-center" : "justify-end"
+          )}>
             <button
               onClick={toggleSidebar}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className={cn(
+                "p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200",
+                "hover:scale-105 active:scale-95"
+              )}
+              title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
             >
               {sidebarCollapsed ? (
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 transition-transform duration-200" />
               ) : (
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 transition-transform duration-200" />
               )}
             </button>
           </div>
@@ -96,16 +112,31 @@ const Sidebar: React.FC = () => {
                     <button
                       onClick={() => navigate(item.path)}
                       className={cn(
-                        'w-full flex items-center px-3 py-3 rounded-lg transition-colors text-left',
+                        'w-full flex items-center rounded-lg transition-all duration-200 text-left relative group',
                         'hover:bg-gray-100 dark:hover:bg-gray-800',
+                        sidebarCollapsed ? 'px-3 py-3 justify-center' : 'px-3 py-3',
                         isActive 
                           ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
-                          : 'text-gray-700 dark:text-gray-300'
+                          : 'text-gray-700 dark:text-gray-300',
+                        'hover:scale-[1.02] active:scale-[0.98]'
                       )}
+                      title={sidebarCollapsed ? item.title : undefined}
                     >
-                      <IconComponent className="w-5 h-5 flex-shrink-0" />
+                      <IconComponent className={cn(
+                        "w-5 h-5 flex-shrink-0 transition-all duration-200",
+                        sidebarCollapsed && "group-hover:scale-110"
+                      )} />
                       {!sidebarCollapsed && (
-                        <span className="ml-3 font-medium">{item.title}</span>
+                        <span className="ml-3 font-medium transition-all duration-200">
+                          {item.title}
+                        </span>
+                      )}
+                      
+                      {/* Tooltip for collapsed state */}
+                      {sidebarCollapsed && (
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none">
+                          {item.title}
+                        </div>
                       )}
                     </button>
                   </li>
@@ -113,6 +144,29 @@ const Sidebar: React.FC = () => {
               })}
             </ul>
           </div>
+          
+          {/* Playlists section indicator for collapsed state */}
+          {sidebarCollapsed && (
+            <div className="flex-shrink-0 px-2 py-4">
+              <div className="flex justify-center">
+                <div className="relative group">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center text-white shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-105">
+                    <Music className="w-5 h-5" />
+                    {playlists.length > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-medium shadow-sm">
+                        {playlists.length > 99 ? '99+' : playlists.length}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Tooltip */}
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none">
+                    我的歌单 ({playlists.length})
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
             
           {/* Playlists section - Scrollable */}
           {!sidebarCollapsed && (

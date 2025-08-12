@@ -1,17 +1,20 @@
 import { neteaseAPI } from './NetEaseAPI';
 import { API_ENDPOINTS } from './config';
 import { getImageProxyUrl } from './proxy-config';
-import type { 
-  SearchRequest, 
-  SearchResult, 
+import type {
+  SearchResult,
   Song,
   Album,
   Artist,
-  Playlist,
-  APIResponse
+  SearchResponse,
+  ApiTrack,
+  ApiAlbum,
+  ApiArtist,
+  ApiPlaylistForSearch
 } from './types';
 import { SearchType } from './types';
 import { logger } from './utils';
+import type { Playlist } from '../../types';
 
 /**
  * 搜索API服务类
@@ -38,7 +41,7 @@ export class SearchAPI {
     logger.info(`执行搜索: "${keywords}", 类型: ${type}, 限制: ${limit}, 偏移: ${offset}`);
 
     try {
-      const response = await neteaseAPI.get<any>(API_ENDPOINTS.SEARCH, {
+      const response = await neteaseAPI.get<SearchResponse>(API_ENDPOINTS.SEARCH, {
         value: keywords.trim(),
         type,
         limit,
@@ -47,8 +50,8 @@ export class SearchAPI {
 
       // 检查API是否返回了有效的搜索结果
       console.log('搜索API响应:', response);
-      
-      if (response.code === 200 && response.result) {
+
+      if (response.code === 200 && response.data?.result) {
         return this.formatSearchResult(response, type);
       } else {
         logger.warn('搜索API返回无效数据，使用模拟数据', response);
@@ -130,14 +133,14 @@ export class SearchAPI {
     keywords: string,
     types: SearchType[] = [SearchType.SONG, SearchType.ALBUM, SearchType.ARTIST],
     limit: number = 10
-  ): Promise<Record<SearchType, any[]>> {
+  ): Promise<Record<SearchType, unknown[]>> {
     if (!keywords.trim()) {
       throw new Error('搜索关键词不能为空');
     }
 
     logger.info(`执行多类型搜索: "${keywords}", 类型: [${types.join(', ')}]`);
 
-    const promises = types.map(type => 
+    const promises = types.map(type =>
       this.search(keywords, type, limit, 0).catch(error => {
         logger.warn(`搜索类型 ${type} 失败`, error);
         return this.getEmptySearchResult(type);
@@ -145,7 +148,7 @@ export class SearchAPI {
     );
 
     const results = await Promise.all(promises);
-    const combinedResult: Record<SearchType, any[]> = {} as any;
+    const combinedResult: Record<SearchType, unknown[]> = {} as Record<SearchType, unknown[]>;
 
     types.forEach((type, index) => {
       const result = results[index];
@@ -228,7 +231,7 @@ export class SearchAPI {
    * @param data API返回的原始数据
    * @param type 搜索类型
    */
-  private static formatSearchResult(data: any, type: SearchType): SearchResult {
+  private static formatSearchResult(data: SearchResponse, type: SearchType): SearchResult {
     const result: SearchResult = {};
 
     if (!data || !data.result) {
@@ -240,28 +243,28 @@ export class SearchAPI {
     switch (type) {
       case SearchType.SONG:
         if (apiResult.songs) {
-          result.songs = apiResult.songs.map((song: any) => this.formatSong(song));
+          result.songs = apiResult.songs.map((song: ApiTrack) => this.formatSong(song));
           result.songCount = apiResult.songCount || 0;
         }
         break;
 
       case SearchType.ALBUM:
         if (apiResult.albums) {
-          result.albums = apiResult.albums.map((album: any) => this.formatAlbum(album));
+          result.albums = apiResult.albums.map((album: ApiAlbum) => this.formatAlbum(album));
           result.albumCount = apiResult.albumCount || 0;
         }
         break;
 
       case SearchType.ARTIST:
         if (apiResult.artists) {
-          result.artists = apiResult.artists.map((artist: any) => this.formatArtist(artist));
+          result.artists = apiResult.artists.map((artist: ApiArtist) => this.formatArtist(artist));
           result.artistCount = apiResult.artistCount || 0;
         }
         break;
 
       case SearchType.PLAYLIST:
         if (apiResult.playlists) {
-          result.playlists = apiResult.playlists.map((playlist: any) => this.formatPlaylist(playlist));
+          result.playlists = apiResult.playlists.map((playlist: ApiPlaylistForSearch) => this.formatPlaylist(playlist));
           result.playlistCount = apiResult.playlistCount || 0;
         }
         break;
@@ -273,24 +276,32 @@ export class SearchAPI {
   /**
    * 格式化歌曲数据
    */
-  private static formatSong(rawSong: any): Song {
+  private static formatSong(rawSong: ApiTrack): Song {
     return {
       id: rawSong.id,
       name: rawSong.name,
-      artists: rawSong.artists?.map((artist: any) => this.formatArtist(artist)) || [],
+      artists: rawSong.artists?.map((artist: ApiArtist) => this.formatArtist(artist)) || [],
       album: this.formatAlbum(rawSong.album),
       duration: rawSong.duration || 0,
       picUrl: this.formatImageUrl(rawSong.album?.picUrl || `https://p1.music.126.net/${rawSong.album?.picId}/${rawSong.album?.picId}.jpg`),
       fee: rawSong.fee,
       mvid: rawSong.mvid,
-      source: 'api'
     };
   }
 
   /**
    * 格式化专辑数据
    */
-  private static formatAlbum(rawAlbum: any): Album {
+  private static formatAlbum(rawAlbum: ApiAlbum | null): Album {
+    if (!rawAlbum) {
+      return {
+        id: 0,
+        name: '未知专辑',
+        picUrl: '',
+        publishTime: Date.now()
+      };
+    }
+
     return {
       id: rawAlbum.id || 0,
       name: rawAlbum.name || '',
@@ -311,7 +322,7 @@ export class SearchAPI {
   /**
    * 格式化艺术家数据
    */
-  private static formatArtist(rawArtist: any): Artist {
+  private static formatArtist(rawArtist: ApiArtist): Artist {
     return {
       id: rawArtist.id || 0,
       name: rawArtist.name || '',
@@ -323,17 +334,17 @@ export class SearchAPI {
   /**
    * 格式化歌单数据
    */
-  private static formatPlaylist(rawPlaylist: any): Playlist {
+  private static formatPlaylist(rawPlaylist: ApiPlaylistForSearch): Playlist {
     return {
-      id: rawPlaylist.id,
-      name: rawPlaylist.name,
-      coverImgUrl: this.formatImageUrl(rawPlaylist.coverImgUrl),
-      description: rawPlaylist.description,
-      creator: rawPlaylist.creator ? {
-        userId: rawPlaylist.creator.userId,
-        nickname: rawPlaylist.creator.nickname,
-        avatarUrl: this.formatImageUrl(rawPlaylist.creator.avatarUrl)
-      } : undefined,
+      id: String(rawPlaylist.id),
+      title: rawPlaylist.name,
+      description: rawPlaylist.description || '',
+      coverUrl: this.formatImageUrl(rawPlaylist.coverImgUrl || ''),
+      creator: rawPlaylist.creator ? rawPlaylist.creator.nickname : '未知',
+      songs: [],
+      isPublic: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       trackCount: rawPlaylist.trackCount,
       playCount: rawPlaylist.playCount
     };
@@ -344,7 +355,7 @@ export class SearchAPI {
    */
   private static getEmptySearchResult(type: SearchType): SearchResult {
     const result: SearchResult = {};
-    
+
     switch (type) {
       case SearchType.SONG:
         result.songs = [];
@@ -403,16 +414,16 @@ export class SearchAPI {
    */
   private static generateMockData(keywords: string, limit: number) {
     const mockSongs: Song[] = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
-      id: `mock_song_${i + 1}`,
+      id: i + 1,
       name: `${keywords} - 歌曲 ${i + 1}`,
       artists: [{
-        id: `mock_artist_${i + 1}`,
+        id: i + 1,
         name: `艺术家 ${i + 1}`,
         picUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzNzNkYyIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QXJ0aXN0PC90ZXh0Pjwvc3ZnPg==',
         alias: []
       }],
       album: {
-        id: `mock_album_${i + 1}`,
+        id: i + 1,
         name: `${keywords} - 专辑 ${i + 1}`,
         picUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjZTUxY2QiLz48dGV4dCB4PSIxNTAiIHk9IjE2MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE4IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QWxidW08L3RleHQ+PC9zdmc+',
         publishTime: Date.now()
@@ -424,14 +435,14 @@ export class SearchAPI {
     }));
 
     const mockAlbums: Album[] = Array.from({ length: Math.min(limit, 3) }, (_, i) => ({
-      id: `mock_album_${i + 1}`,
+      id: i + 1,
       name: `${keywords} - 专辑 ${i + 1}`,
       picUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMzNzNkYyIvPjx0ZXh0IHg9IjE1MCIgeT0iMTYwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BbGJ1bTwvdGV4dD48L3N2Zz4=',
       publishTime: Date.now() - i * 86400000
     }));
 
     const mockArtists: Artist[] = Array.from({ length: Math.min(limit, 3) }, (_, i) => ({
-      id: `mock_artist_${i + 1}`,
+      id: i + 1,
       name: `${keywords} - 艺术家 ${i + 1}`,
       picUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzEwYjk4MSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QXJ0aXN0PC90ZXh0Pjwvc3ZnPg==',
       alias: []
@@ -439,14 +450,14 @@ export class SearchAPI {
 
     const mockPlaylists: Playlist[] = Array.from({ length: Math.min(limit, 3) }, (_, i) => ({
       id: `mock_playlist_${i + 1}`,
-      name: `${keywords} - 歌单 ${i + 1}`,
-      coverImgUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjE1MCIgeT0iMTYwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5QbGF5bGlzdDwvdGV4dD48L3N2Zz4=',
+      title: `${keywords} - 歌单 ${i + 1}`,
       description: `包含${keywords}相关音乐的精选歌单`,
-      creator: {
-        userId: `mock_user_${i + 1}`,
-        nickname: `用户 ${i + 1}`,
-        avatarUrl: ''
-      },
+      coverUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjE1MCIgeT0iMTYwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5QbGF5bGlzdDwvdGV4dD48L3N2Zz4=',
+      creator: `用户 ${i + 1}`,
+      songs: [],
+      isPublic: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       trackCount: 20 + i * 10,
       playCount: 1000 + i * 500
     }));

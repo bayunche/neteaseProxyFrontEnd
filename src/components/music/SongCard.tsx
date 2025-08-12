@@ -96,7 +96,7 @@ const SongCard: React.FC<SongCardProps> = ({
       onAddToFavorites(song);
     } else {
       if (isFavorite) {
-        removeFromFavorites(song.id);
+        removeFromFavorites(String(song.id));
       } else {
         addToFavorites(song);
       }
@@ -163,7 +163,7 @@ const SongCard: React.FC<SongCardProps> = ({
             )}
             {showAlbum && (
               <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                {song.album}
+                {getSongAlbum()}
               </div>
             )}
           </div>

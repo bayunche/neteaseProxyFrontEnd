@@ -11,28 +11,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      // 代理音频文件 - 动态代理不同的音频服务器
+      // 代理音频文件 - 简化版本
       '^/audio/.*': {
-        target: '',
+        target: 'http://music.163.com',
         changeOrigin: true,
         secure: false,
-        router: (req) => {
-          // 从路径中提取目标服务器
-          const match = req.url.match(/^\/audio\/([^\/]+)/);
-          if (match) {
-            const host = match[1];
-            return `http://${host}`;
-          }
-          return 'http://localhost:5173';
-        },
-        pathRewrite: {
-          '^/audio/[^/]+': '' // 移除 /audio/域名 前缀
-        },
-        onProxyReq: (proxyReq, req, res) => {
-          // 设置必要的请求头
-          proxyReq.setHeader('Referer', 'https://music.163.com/');
-          proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-        }
+        rewrite: (path: string) => path.replace(/^\/audio/, '')
       }
     }
   }

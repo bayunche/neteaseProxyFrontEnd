@@ -178,16 +178,12 @@ export class AudioEngine {
     this.audio.src = song.audioUrl;
     
     return new Promise((resolve, reject) => {
-      let timeout: number;
-      
       const cleanup = () => {
         this.audio.removeEventListener('canplay', handleCanPlay);
         this.audio.removeEventListener('canplaythrough', handleCanPlayThrough);
         this.audio.removeEventListener('error', handleError);
         this.audio.removeEventListener('loadeddata', handleLoadedData);
-        if (timeout) {
-          clearTimeout(timeout);
-        }
+        clearTimeout(timeout);
       };
       
       const handleCanPlay = () => {
@@ -228,7 +224,7 @@ export class AudioEngine {
         }
         
         // 如果是生成的音频URL失败，可能是浏览器不支持
-        if (song.audioUrl.startsWith('blob:')) {
+        if (song.audioUrl?.startsWith('blob:')) {
           errorMessage = '浏览器不支持生成的音频格式';
         }
         
@@ -236,7 +232,7 @@ export class AudioEngine {
       };
 
       // 设置超时
-      timeout = window.setTimeout(() => {
+      const timeout = window.setTimeout(() => {
         cleanup();
         reject(new Error('音频加载超时，请检查网络连接'));
       }, 10000); // 10秒超时

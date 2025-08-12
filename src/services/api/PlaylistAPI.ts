@@ -1,15 +1,15 @@
 import { neteaseAPI } from './NetEaseAPI';
 import { API_ENDPOINTS } from './config';
 import { getImageProxyUrl } from './proxy-config';
-import type { 
+import type {
   PlaylistDetailRequest,
   PlaylistDetailResponse,
-  SongDetailRequest,
   SongDetailResponse,
-  APIResponse,
-  APIErrorType
+  ApiTrack,
+  ApiArtist,
+  ApiAlbum
 } from './types';
-import { APIError } from './types';
+import { APIError, APIErrorType } from './types';
 import { logger } from './utils';
 import type { Song, Album, Artist, Playlist } from '../../types';
 
@@ -26,7 +26,7 @@ export class PlaylistAPI {
    */
   static async getPlaylistDetail(request: PlaylistDetailRequest): Promise<Playlist> {
     const { id, s = 10 } = request;
-    
+
     if (!id) {
       throw new APIError(
         APIErrorType.VALIDATION_ERROR,
@@ -44,22 +44,22 @@ export class PlaylistAPI {
           s
         }
       );
-      
+
       if (response.code === 200 && response.playlist) {
         const apiPlaylist = response.playlist;
-        
+
         // 处理歌曲列表
         let songs: Song[] = [];
-        
+
         if (apiPlaylist.tracks && apiPlaylist.tracks.length > 0) {
           // 歌单在1000首以下，直接有歌曲详情
-          songs = apiPlaylist.tracks.map((track: any) => this.formatSong(track));
+          songs = apiPlaylist.tracks.map((track: ApiTrack) => this.formatSong(track));
           logger.info(`歌单包含歌曲详情: ${songs.length}首`);
         } else if (apiPlaylist.trackIds && apiPlaylist.trackIds.length > 0) {
           // 歌单超过1000首，需要调用歌曲详情接口
-          const trackIds = apiPlaylist.trackIds.slice(0, 1000).map(item => item.id);
+          const trackIds = apiPlaylist.trackIds.slice(0, 1000).map((item: { id: number }) => item.id);
           logger.info(`歌单超过1000首，获取前1000首歌曲详情: ${trackIds.length}首`);
-          
+
           try {
             const songDetails = await this.getSongDetails(trackIds);
             songs = songDetails;
@@ -94,11 +94,11 @@ export class PlaylistAPI {
       }
     } catch (error) {
       logger.error('获取歌单详情失败', error);
-      
+
       if (error instanceof APIError) {
         throw error;
       }
-      
+
       throw new APIError(
         APIErrorType.NETWORK_ERROR,
         '获取歌单详情网络错误'
@@ -124,9 +124,9 @@ export class PlaylistAPI {
           ids: ids.join(',')
         }
       );
-      
+
       if (response.code === 200 && response.songs) {
-        const songs = response.songs.map((song: any) => this.formatSong(song));
+        const songs = response.songs.map((song: ApiTrack) => this.formatSong(song));
         logger.info(`获取歌曲详情成功: ${songs.length}首`);
         return songs;
       } else {
@@ -137,11 +137,11 @@ export class PlaylistAPI {
       }
     } catch (error) {
       logger.error('获取歌曲详情失败', error);
-      
+
       if (error instanceof APIError) {
         throw error;
       }
-      
+
       throw new APIError(
         APIErrorType.NETWORK_ERROR,
         '获取歌曲详情网络错误'
@@ -152,13 +152,13 @@ export class PlaylistAPI {
   /**
    * 格式化歌曲数据
    */
-  private static formatSong(rawSong: any): Song {
-    const artists = rawSong.artists?.map((artist: any) => ({
+  private static formatSong(rawSong: ApiTrack): Song {
+    const artists = rawSong.artists?.map((artist: ApiArtist) => ({
       id: artist.id,
       name: artist.name,
       picUrl: artist.picUrl || artist.img1v1Url,
       alias: artist.alias || []
-    })) || rawSong.ar?.map((artist: any) => ({
+    })) || rawSong.ar?.map((artist: ApiArtist) => ({
       id: artist.id,
       name: artist.name,
       picUrl: artist.picUrl || artist.img1v1Url,
@@ -167,24 +167,24 @@ export class PlaylistAPI {
 
     return {
       id: String(rawSong.id),
-      title: rawSong.name || rawSong.title || '',
-      name: rawSong.name || rawSong.title || '', // API字段
-      artist: artists.map(a => a.name).join(', ') || '未知艺术家',
+      title: rawSong.name || '',
+      name: rawSong.name || '', // API字段
+      artist: artists.map((a: { name: string }) => a.name).join(', ') || '未知艺术家',
       artists: artists,
       album: rawSong.album?.name || rawSong.al?.name || '未知专辑',
       duration: rawSong.duration || rawSong.dt || 0,
       coverUrl: this.formatImageUrl(
-        rawSong.album?.picUrl || 
-        rawSong.al?.picUrl || 
+        rawSong.album?.picUrl ||
+        rawSong.al?.picUrl ||
         `https://p1.music.126.net/${rawSong.album?.picId || rawSong.al?.picId}/${rawSong.album?.picId || rawSong.al?.picId}.jpg`
       ),
       picUrl: this.formatImageUrl(
-        rawSong.album?.picUrl || 
-        rawSong.al?.picUrl || 
+        rawSong.album?.picUrl ||
+        rawSong.al?.picUrl ||
         `https://p1.music.126.net/${rawSong.album?.picId || rawSong.al?.picId}/${rawSong.album?.picId || rawSong.al?.picId}.jpg`
       ),
       audioUrl: '', // 播放URL需要单独获取
-      source: 'api' as any,
+      source: 'api' as const,
       fee: rawSong.fee,
       mvid: rawSong.mvid || rawSong.mv
     };
@@ -193,34 +193,34 @@ export class PlaylistAPI {
   /**
    * 格式化专辑数据
    */
-  private static formatAlbum(rawAlbum: any): Album {
+  private static formatAlbum(rawAlbum: ApiAlbum | null): Album {
     if (!rawAlbum) {
       return {
         id: '',
         title: '未知专辑',
         artist: '未知艺术家',
         coverUrl: '',
-        year: 0,
-        tracks: [],
-        source: 'api' as any
+        releaseDate: new Date(),
+        songs: [],
+        source: 'api' as const
       };
     }
 
     return {
       id: String(rawAlbum.id || ''),
-      title: rawAlbum.name || rawAlbum.title || '未知专辑',
-      artist: rawAlbum.artist?.name || '未知艺术家',
+      title: rawAlbum.name || '未知专辑',
+      artist: '未知艺术家',
       coverUrl: this.formatImageUrl(rawAlbum.picUrl || `https://p1.music.126.net/${rawAlbum.picId}/${rawAlbum.picId}.jpg`),
-      year: rawAlbum.publishTime ? new Date(rawAlbum.publishTime).getFullYear() : 0,
-      tracks: [],
-      source: 'api' as any
+      releaseDate: new Date(rawAlbum.publishTime),
+      songs: [],
+      source: 'api' as const
     };
   }
 
   /**
    * 格式化艺术家数据
    */
-  private static formatArtist(rawArtist: any): Artist {
+  private static formatArtist(rawArtist: ApiArtist | null): Artist {
     if (!rawArtist) {
       return {
         id: '',
@@ -229,7 +229,7 @@ export class PlaylistAPI {
         description: '',
         albums: [],
         topSongs: [],
-        source: 'api' as any
+        source: 'api' as const
       };
     }
 
@@ -237,10 +237,10 @@ export class PlaylistAPI {
       id: String(rawArtist.id || ''),
       name: rawArtist.name || '未知艺术家',
       avatarUrl: this.formatImageUrl(rawArtist.picUrl || rawArtist.img1v1Url || ''),
-      description: rawArtist.briefDesc || '',
+      description: '',
       albums: [],
       topSongs: [],
-      source: 'api' as any
+      source: 'api' as const
     };
   }
 

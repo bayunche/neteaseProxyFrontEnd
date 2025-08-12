@@ -4,7 +4,6 @@ import {
   Play, 
   MoreHorizontal, 
   Calendar,
-  Filter,
   X,
   Trash2,
   Download,
@@ -13,7 +12,6 @@ import {
 import { usePlayerStore } from '../stores';
 import { cn } from '../utils/cn';
 import type { Song, PlayHistoryEntry } from '../types';
-import { statsService } from '../services/StatsService';
 
 const RecentPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'all'>('all');
@@ -21,7 +19,7 @@ const RecentPage: React.FC = () => {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [recentHistory, setRecentHistory] = useState<PlayHistoryEntry[]>([]);
   
-  const { play, addToQueue, user, clearRecentPlayed } = usePlayerStore();
+  const { play, addToQueue, clearRecentPlayed } = usePlayerStore();
 
   // 加载最近播放历史
   useEffect(() => {
@@ -30,7 +28,7 @@ const RecentPage: React.FC = () => {
         const stored = localStorage.getItem('music-player-history');
         if (stored) {
           const parsed = JSON.parse(stored);
-          const history = parsed.map((entry: any) => ({
+          const history = parsed.map((entry: PlayHistoryEntry & { playedAt: string }) => ({
             ...entry,
             playedAt: new Date(entry.playedAt)
           }));
@@ -55,18 +53,21 @@ const RecentPage: React.FC = () => {
     // 时间过滤
     const now = new Date();
     switch (selectedPeriod) {
-      case 'today':
+      case 'today': {
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         filtered = filtered.filter(entry => entry.playedAt >= today);
         break;
-      case 'week':
+      }
+      case 'week': {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         filtered = filtered.filter(entry => entry.playedAt >= weekAgo);
         break;
-      case 'month':
+      }
+      case 'month': {
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         filtered = filtered.filter(entry => entry.playedAt >= monthAgo);
         break;
+      }
     }
 
     // 搜索过滤
@@ -162,7 +163,6 @@ const RecentPage: React.FC = () => {
     showTime?: boolean; 
   }> = ({ entry, showTime = true }) => {
     const song = entry.song;
-    const isFavorite = user.favorites.some(fav => fav.id === song.id);
 
     return (
       <div className="group flex items-center space-x-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
@@ -315,7 +315,7 @@ const RecentPage: React.FC = () => {
               ].map((period) => (
                 <button
                   key={period.key}
-                  onClick={() => setSelectedPeriod(period.key as any)}
+                  onClick={() => setSelectedPeriod(period.key as 'today' | 'week' | 'month' | 'all')}
                   className={cn(
                     'px-3 py-1 rounded-md text-sm font-medium transition-colors',
                     selectedPeriod === period.key

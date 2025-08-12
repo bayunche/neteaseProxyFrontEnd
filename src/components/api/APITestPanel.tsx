@@ -35,7 +35,7 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
 
     try {
       const result = await testFn();
-      setResults(result);
+      setResults(result as Record<string, unknown>);
       console.log(`${testName} 成功:`, result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '未知错误';
@@ -234,7 +234,7 @@ export const APITestPanel: React.FC<APITestPanelProps> = ({ className = '' }) =>
             onClick={clearResults}
             disabled={loading !== null}
             className="px-6"
-            variant="outline"
+            variant="secondary"
           >
             🗑️ 清除结果
           </Button>

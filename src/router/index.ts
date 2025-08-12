@@ -2,7 +2,7 @@ import { lazy } from 'react';
 
 // 页面组件懒加载
 const HomePage = lazy(() => import('../pages/HomePage'));
-const PlaylistDetailPage = lazy(() => import('../pages/PlaylistDetailPage'));
+const PlaylistDetailPage = lazy(() => import('../pages/PlaylistDetailPage.enhanced'));
 const LyricsPage = lazy(() => import('../pages/LyricsPage'));
 const StatsPage = lazy(() => import('../pages/StatsPage'));
 const RecentPage = lazy(() => import('../pages/RecentPage'));
@@ -13,7 +13,7 @@ const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 // 路由配置类型
 export interface RouteConfig {
   path: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+  component: React.LazyExoticComponent<React.ComponentType>;
   title: string;
   icon?: string;
   showInNavigation?: boolean;

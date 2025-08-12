@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Heart, MoreHorizontal, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { formatTime } from '../../utils/timeFormat';
 import { usePlayerStore } from '../../stores';
 
 interface SongContentAreaProps {
@@ -44,7 +45,7 @@ const SongContentArea: React.FC<SongContentAreaProps> = ({ onScrollDetected }) =
 
   // 更新当前歌词行
   useEffect(() => {
-    if (currentLyrics?.lines?.length > 0) {
+    if (currentLyrics?.lines && currentLyrics.lines.length > 0) {
       updateCurrentLyricLine(currentTime);
     }
   }, [currentTime, updateCurrentLyricLine, currentLyrics]);
@@ -62,11 +63,6 @@ const SongContentArea: React.FC<SongContentAreaProps> = ({ onScrollDetected }) =
     setVolume(newVolume);
   };
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
   const isFavorite = currentSong && user.favorites.some(song => song.id === currentSong.id);
 
@@ -74,7 +70,7 @@ const SongContentArea: React.FC<SongContentAreaProps> = ({ onScrollDetected }) =
     if (!currentSong) return;
     
     if (isFavorite) {
-      removeFromFavorites(currentSong.id);
+      removeFromFavorites(String(currentSong.id));
     } else {
       addToFavorites(currentSong);
     }
@@ -239,22 +235,47 @@ const SongContentArea: React.FC<SongContentAreaProps> = ({ onScrollDetected }) =
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">当前歌词</h3>
           {currentLyrics && currentLyrics.lines && currentLyrics.lines.length > 0 && currentLineIndex >= 0 ? (
             <div className="space-y-3">
+              {/* 当前播放歌词 */}
               <div className="text-center p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-                <p className="text-lg font-medium text-primary-600 dark:text-primary-400 leading-relaxed">
+                <p className="text-lg font-medium text-primary-600 dark:text-primary-400 leading-relaxed mb-2">
                   {currentLyrics.lines[currentLineIndex]?.text}
                 </p>
-              </div>
-              {/* 显示前后几句歌词 */}
-              <div className="space-y-2">
-                {currentLineIndex > 0 && (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center opacity-70">
-                    {currentLyrics.lines[currentLineIndex - 1]?.text}
+                {/* 当前歌词的翻译 */}
+                {currentLyrics.lines[currentLineIndex]?.translation && (
+                  <p className="text-sm text-primary-500 dark:text-primary-300 leading-relaxed opacity-80">
+                    {currentLyrics.lines[currentLineIndex].translation}
                   </p>
                 )}
+              </div>
+              
+              {/* 显示前后几句歌词 */}
+              <div className="space-y-2">
+                {/* 上一句 */}
+                {currentLineIndex > 0 && (
+                  <div className="text-center opacity-70">
+                    <p className="text-sm text-gray-400 dark:text-gray-500">
+                      {currentLyrics.lines[currentLineIndex - 1]?.text}
+                    </p>
+                    {currentLyrics.lines[currentLineIndex - 1]?.translation && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 opacity-60">
+                        {currentLyrics.lines[currentLineIndex - 1].translation}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {/* 下一句预览 */}
                 {currentLineIndex < currentLyrics.lines.length - 1 && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                    即将播放：{currentLyrics.lines[currentLineIndex + 1]?.text}
-                  </p>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      即将播放：{currentLyrics.lines[currentLineIndex + 1]?.text}
+                    </p>
+                    {currentLyrics.lines[currentLineIndex + 1]?.translation && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 opacity-70">
+                        {currentLyrics.lines[currentLineIndex + 1].translation}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

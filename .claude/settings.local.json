@@ -21,7 +21,9 @@
       "Bash(npm run type-check:*)",
       "Bash(npm run:*)",
       "Bash(npx tsc:*)",
-      "Bash(wmic process where:*)"
+      "Bash(wmic process where:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }

@@ -1,10 +1,9 @@
 import type { 
   APIResponse, 
-  RequestOptions, 
-  APIErrorType
+  RequestOptions
 } from './types';
 import { APIError } from './types';
-import { API_CONFIG, HTTP_STATUS, NETEASE_CODE } from './config';
+import { API_CONFIG, NETEASE_CODE } from './config';
 import { 
   buildURL, 
   handleHTTPError, 
@@ -46,7 +45,7 @@ export class NetEaseAPI {
   /**
    * 核心请求方法
    */
-  async request<T = any>(
+  async request<T = unknown>(
     path: string, 
     options: RequestOptions = {}
   ): Promise<APIResponse<T>> {
@@ -155,9 +154,9 @@ export class NetEaseAPI {
   /**
    * GET 请求简化方法
    */
-  async get<T = any>(
+  async get<T = unknown>(
     path: string, 
-    params?: Record<string, any>, 
+    params?: Record<string, unknown>, 
     options?: Omit<RequestOptions, 'method' | 'params'>
   ): Promise<APIResponse<T>> {
     return this.request<T>(path, {
@@ -170,9 +169,9 @@ export class NetEaseAPI {
   /**
    * POST 请求简化方法
    */
-  async post<T = any>(
+  async post<T = unknown>(
     path: string, 
-    body?: any, 
+    body?: Record<string, unknown>, 
     options?: Omit<RequestOptions, 'method' | 'body'>
   ): Promise<APIResponse<T>> {
     return this.request<T>(path, {

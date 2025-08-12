@@ -5,6 +5,7 @@ export { SongAPI } from './SongAPI';
 export { AuthAPI } from './AuthAPI';
 export { PlaylistAPI } from './PlaylistAPI';
 export { LyricAPI } from './LyricAPI';
+export { EnhancedPlaylistAPI } from './PlaylistAPI.enhanced';
 
 // 导出枚举和类
 export { SearchType, APIError } from './types';
@@ -15,32 +16,31 @@ export type {
   APIErrorType,
   RequestOptions,
   APIConfig,
-  
+
   // 搜索相关类型
   SearchRequest,
   SearchResult,
-  
+
   // 歌曲相关类型
   Song,
   Artist,
   Album,
-  Playlist,
   SongUrlRequest,
   SongUrlResponse,
   SongDetailRequest,
   SongDetailResponse,
-  
+
   // 歌单相关类型
   PlaylistDetailRequest,
   PlaylistDetailResponse,
-  
+
   // 歌词相关类型
   LyricRequest,
   LyricResponse,
-  
+
   // 用户相关类型
   User,
-  
+
   // 认证相关类型（从AuthAPI导入）
 } from './types';
 
@@ -52,11 +52,11 @@ export type {
 } from './AuthAPI';
 
 // 导出配置和工具
-export { 
-  API_CONFIG, 
-  AUDIO_QUALITY, 
-  SEARCH_TYPE_NAMES, 
-  API_ENDPOINTS 
+export {
+  API_CONFIG,
+  AUDIO_QUALITY,
+  SEARCH_TYPE_NAMES,
+  API_ENDPOINTS
 } from './config';
 
 export {

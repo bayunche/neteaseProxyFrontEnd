@@ -59,7 +59,7 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* 背景遮罩 */}
+      {/* 移动端背景遮罩 */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
@@ -69,8 +69,14 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
 
       {/* 侧边栏 */}
       <div className={cn(
-        "fixed right-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
-        isOpen ? "translate-x-0" : "translate-x-full"
+        "h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col",
+        "transition-all duration-300 ease-in-out flex-shrink-0",
+        // 桌面端：正常的flex布局，通过宽度控制显示隐藏
+        "max-md:fixed max-md:right-0 max-md:top-0 max-md:bottom-0 max-md:z-50 max-md:transform",
+        // 桌面端宽度控制
+        isOpen ? "w-80 md:w-80" : "w-0 md:w-0 overflow-hidden",
+        // 移动端transform控制
+        isOpen ? "max-md:translate-x-0" : "max-md:translate-x-full"
       )}>
         {/* 头部 */}
         <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">

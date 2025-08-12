@@ -1,9 +1,8 @@
 import { neteaseAPI } from './NetEaseAPI';
-import { APIError } from './types';
+import { APIError, APIErrorType } from './types';
 import type {
   User,
   APIResponse,
-  APIErrorType,
   UserStatus,
   UserPlaylistRequest,
   UserPlaylistResponse
@@ -27,7 +26,8 @@ export interface LoginWithCodeRequest {
   code: string;
 }
 
-export interface LoginWithCodeResponse extends APIResponse {
+export interface LoginWithCodeResponse {
+  code: number;
   token?: string;
   profile?: User;
   cookie?: string;
@@ -121,10 +121,13 @@ export class AuthAPI {
     logger.info(`验证码登录: ${phone.substring(0, 3)}****${phone.substring(7)}`);
 
     try {
-      const response = await neteaseAPI.get<LoginWithCodeResponse>(
+      const response = (await neteaseAPI.get<LoginWithCodeResponse>(
         '/user/cellphone',
-        { phone, captcha: code }
-      );
+        { phone, code: code }
+      )) as unknown as LoginWithCodeResponse;
+
+      // 打印完整的响应数据以进行调试
+      logger.info('Login response received:', JSON.stringify(response, null, 2));
 
       // 处理登录成功 - NetEase API直接返回登录数据，不在data字段中
       if (response.code === 200 && response.profile) {
@@ -324,7 +327,7 @@ export class AuthAPI {
   static async getUserStatus(): Promise<UserStatus> {
     if (!this.isLoggedIn()) {
       throw new APIError(
-        APIErrorType.UNAUTHORIZED, 
+        APIErrorType.UNAUTHORIZED,
         '用户未登录，无法获取用户状态信息'
       );
     }
@@ -333,16 +336,16 @@ export class AuthAPI {
 
     try {
       const response = await neteaseAPI.get<UserStatus>(API_ENDPOINTS.USER_STATUS);
-      
+
       if (response.code === 200 && response.data) {
         // 更新当前用户信息
-        if (response.data.profile) {
-          this.currentUser = response.data.profile;
+        if (response.data.data?.profile) {
+          this.currentUser = response.data.data.profile;
           this.saveAuthState();
         }
-        
-        logger.info('获取用户状态信息成功', response.data.profile?.nickname);
-        return response;
+
+        logger.info('获取用户状态信息成功', response.data.data?.profile?.nickname);
+        return response.data;
       } else {
         throw new APIError(
           APIErrorType.SERVER_ERROR,
@@ -351,11 +354,11 @@ export class AuthAPI {
       }
     } catch (error) {
       logger.error('获取用户状态信息失败', error);
-      
+
       if (error instanceof APIError) {
         throw error;
       }
-      
+
       throw new APIError(
         APIErrorType.NETWORK_ERROR,
         '获取用户状态信息网络错误'
@@ -371,7 +374,7 @@ export class AuthAPI {
    */
   static async getUserPlaylist(request: UserPlaylistRequest): Promise<UserPlaylistResponse> {
     const { uid, limit = 30, offset = 0 } = request;
-    
+
     if (!uid) {
       throw new APIError(
         APIErrorType.VALIDATION_ERROR,
@@ -390,8 +393,8 @@ export class AuthAPI {
           offset
         }
       );
-      
-      if (response.code === 200) {
+
+      if (response.code === 200 && response.playlist) {
         logger.info(`获取用户歌单列表成功: 共${response.playlist?.length || 0}个歌单`);
         return response;
       } else {
@@ -402,11 +405,11 @@ export class AuthAPI {
       }
     } catch (error) {
       logger.error('获取用户歌单列表失败', error);
-      
+
       if (error instanceof APIError) {
         throw error;
       }
-      
+
       throw new APIError(
         APIErrorType.NETWORK_ERROR,
         '获取用户歌单列表网络错误'

@@ -1,4 +1,25 @@
-// Core music data models
+// Constants (first, so they can be used in interfaces)
+export const MusicSource = {
+  QQ_MUSIC: 'qq',
+  KUGOU: 'kugou',
+  MIGU: 'migu',
+  LOCAL: 'local',
+  API: 'api', // 来自NetEase API的歌曲
+  NETEASE: 'netease'
+} as const;
+
+export type MusicSource = typeof MusicSource[keyof typeof MusicSource];
+
+export const AudioQuality = {
+  LOW: '128k',
+  STANDARD: '192k',
+  HIGH: '320k',
+  LOSSLESS: 'flac'
+} as const;
+
+export type AudioQuality = typeof AudioQuality[keyof typeof AudioQuality];
+
+// Core music data models (now that types are defined)
 export interface Song {
   id: string | number;
   title?: string;
@@ -51,27 +72,6 @@ export interface Playlist {
   playCount?: number;   // 播放次数
 }
 
-// Constants (instead of enums to avoid TypeScript issues)
-export const MusicSource = {
-  QQ_MUSIC: 'qq',
-  KUGOU: 'kugou',
-  MIGU: 'migu',
-  LOCAL: 'local',
-  API: 'api', // 来自NetEase API的歌曲
-  NETEASE: 'netease'
-} as const;
-
-export type MusicSource = typeof MusicSource[keyof typeof MusicSource];
-
-export const AudioQuality = {
-  LOW: '128k',
-  STANDARD: '192k',
-  HIGH: '320k',
-  LOSSLESS: 'flac'
-} as const;
-
-export type AudioQuality = typeof AudioQuality[keyof typeof AudioQuality];
-
 export const PlayMode = {
   SEQUENCE: 'sequence',
   RANDOM: 'random',
@@ -88,7 +88,7 @@ export type AudioEvent =
   | 'loadstart' | 'loadeddata' | 'canplay' | 'canplaythrough'
   | 'play' | 'pause' | 'ended' | 'timeupdate' | 'progress'
   | 'volumechange' | 'error' | 'stalled' | 'stop' | 'seek'
-  | 'queuechange' | 'playmodechange';
+  | 'queuechange' | 'playmodechange' | 'queuecomplete';
 
 // Search related types
 export interface SearchResult {

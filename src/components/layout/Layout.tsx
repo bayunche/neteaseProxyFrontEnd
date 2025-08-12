@@ -13,7 +13,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { ui, toggleQueue } = usePlayerStore();
-  const { theme, sidebarCollapsed, showQueue, showLyrics } = ui;
+  const { theme, showQueue, showLyrics } = ui;
 
   return (
     <div className={cn('min-h-screen', theme === 'dark' && 'dark')}>
@@ -27,21 +27,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Sidebar />
           
           {/* Main content */}
-          <main 
-            className={cn(
-              'flex-1 overflow-y-auto transition-all duration-300',
-              sidebarCollapsed ? 'ml-16' : 'ml-64',
-              'md:ml-64', // Always show full sidebar on medium+ screens
-              'max-md:ml-0' // Hide sidebar on mobile
-            )}
-          >
+          <main className="flex-1 overflow-y-auto transition-all duration-300 ease-out">
             <div className="flex h-full">
               {/* Page content */}
               <div className={cn(
-                'transition-all duration-300',
-                showLyrics ? 'flex-1' : 'w-full'
+                'transition-all duration-300 h-full flex flex-col',
+                'flex-1 min-w-0' // 确保内容区域可以收缩
               )}>
-                <div className="p-6">
+                <div className="flex-1 overflow-hidden">
                   {children}
                 </div>
               </div>

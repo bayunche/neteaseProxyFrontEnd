@@ -66,7 +66,7 @@ const HomePage: React.FC = () => {
           </Button>
           <Button
             onClick={() => setShowAPITest(!showAPITest)}
-            variant={showAPITest ? "primary" : "outline"}
+            variant={showAPITest ? "primary" : "secondary"}
             size="sm"
             icon={<Settings className="w-4 h-4" />}
           >
@@ -85,11 +85,14 @@ const HomePage: React.FC = () => {
       {/* 搜索结果 */}
       {search.keyword && (search.results || search.isSearching) && (
         <div className="mb-8">
-          {console.log('HomePage - 渲染搜索结果:', { 
-            keyword: search.keyword, 
-            results: search.results, 
-            isSearching: search.isSearching 
-          })}
+          {(() => {
+            console.log('HomePage - 渲染搜索结果:', { 
+              keyword: search.keyword, 
+              results: search.results, 
+              isSearching: search.isSearching 
+            });
+            return null;
+          })()}
           <SearchResults />
         </div>
       )}

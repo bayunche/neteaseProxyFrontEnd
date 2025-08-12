@@ -6,7 +6,7 @@ export const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
 // 构建查询参数字符串
-export const buildQueryString = (params: Record<string, any>): string => {
+export const buildQueryString = (params: Record<string, unknown>): string => {
   const searchParams = new URLSearchParams();
   
   Object.entries(params).forEach(([key, value]) => {
@@ -19,7 +19,7 @@ export const buildQueryString = (params: Record<string, any>): string => {
 };
 
 // 构建完整URL
-export const buildURL = (baseURL: string, path: string, params?: Record<string, any>): string => {
+export const buildURL = (baseURL: string, path: string, params?: Record<string, unknown>): string => {
   const url = `${baseURL}${path}`;
   
   if (params && Object.keys(params).length > 0) {
@@ -126,7 +126,7 @@ export const formatPlayCount = (count: number): string => {
 };
 
 // 检查歌曲是否可播放
-export const isSongPlayable = (song: any): boolean => {
+export const isSongPlayable = (song: { audioUrl?: string; id: string | number }): boolean => {
   // fee: 0免费, 1VIP, 4付费, 8非会员可免费播放低音质
   return song.fee === 0 || song.fee === 8;
 };
@@ -152,13 +152,13 @@ export const generateRequestId = (): string => {
 
 // 日志工具
 export const logger = {
-  info: (message: string, data?: any) => {
+  info: (message: string, data?: unknown) => {
     console.log(`[NetEase API] ${message}`, data || '');
   },
-  warn: (message: string, data?: any) => {
+  warn: (message: string, data?: unknown) => {
     console.warn(`[NetEase API] ${message}`, data || '');
   },
-  error: (message: string, error?: any) => {
+  error: (message: string, error?: unknown) => {
     console.error(`[NetEase API] ${message}`, error || '');
   }
 };

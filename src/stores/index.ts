@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Song, Playlist, PlaybackState, UserSettings, Lyrics } from '../types';
+import type { Song, Playlist, PlaybackState, UserSettings, Lyrics, PlayStats, PlaybackQueue } from '../types';
 import { PlayMode } from '../types';
 import { audioService } from '../services/audio';
 import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult } from '../services/api';
-import { statsService, type UserStats } from '../services/StatsService';
+import { statsService } from '../services/StatsService';
 
 // Extended search result with pagination info
 interface ExtendedSearchResult extends APISearchResult {
@@ -79,7 +79,7 @@ interface AppState {
   // Stats state
   stats: {
     isLoading: boolean;
-    data: UserStats | null;
+    data: PlayStats | null;
     error: string | null;
   };
 }
@@ -265,7 +265,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
         eventCleanupFunctions.push(audioStateUnsubscribe);
 
         // 监听队列变化
-        const queueChangeUnsubscribe = audioService.on('queuechange', (queue: { songs: Song[]; currentIndex: number }) => {
+        const queueChangeUnsubscribe = audioService.on('queuechange', (queue: PlaybackQueue) => {
           set((state) => ({
             queue: {
               ...state.queue,
@@ -284,7 +284,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
         
         // 在window对象上存储清理函数，供调试和手动清理使用
         if (typeof window !== 'undefined') {
-          (window as any).__audioEventCleanup = () => {
+          (window as Window & { __audioEventCleanup?: () => void }).__audioEventCleanup = () => {
             console.log('清理音频事件监听器:', eventCleanupFunctions.length, '个');
             eventCleanupFunctions.forEach(cleanup => cleanup());
             eventCleanupFunctions.length = 0; // 清空数组
@@ -335,8 +335,6 @@ export const usePlayerStore = create<AppState & AppActions>()(
         
         // Player actions implementation
         play: async (song?: Song) => {
-          const state = get();
-          
           try {
             if (song) {
               // 如果指定了歌曲，直接播放
@@ -430,7 +428,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
         
         setPlayMode: (mode: PlayMode) => {
           audioService.setPlayMode(mode);
-          statsService.onPlayModeChange(mode);
+          statsService.onPlayModeChange();
           set((state) => ({
             player: {
               ...state.player,
@@ -554,7 +552,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
             get().loadLyrics(String(songs[0].id));
             
             // 记录播放统计
-            statsService.onSongChange(songs[0], 'playlist');
+            statsService.onSongChange(songs[0], 'manual');
             
             // 更新最近播放
             get().updateRecentPlayed(songs[0]);
@@ -917,10 +915,10 @@ export const usePlayerStore = create<AppState & AppActions>()(
               );
 
               searchResults = {
-                songs: multiResults[SearchType.SONG] || [],
-                albums: multiResults[SearchType.ALBUM] || [],
-                artists: multiResults[SearchType.ARTIST] || [],
-                playlists: multiResults[SearchType.PLAYLIST] || [],
+                songs: (multiResults[SearchType.SONG] as Song[]) || [],
+                albums: (multiResults[SearchType.ALBUM] as unknown[]) || [],
+                artists: (multiResults[SearchType.ARTIST] as unknown[]) || [],
+                playlists: (multiResults[SearchType.PLAYLIST] as unknown[]) || [],
                 total: (multiResults[SearchType.SONG]?.length || 0) +
                        (multiResults[SearchType.ALBUM]?.length || 0) +
                        (multiResults[SearchType.ARTIST]?.length || 0) +
@@ -1054,11 +1052,11 @@ export const usePlayerStore = create<AppState & AppActions>()(
           }));
         },
         
-        setCurrentView: (view: string) => {
+        setCurrentView: (view: 'home' | 'search' | 'playlist' | 'player') => {
           set((state) => ({
             ui: {
               ...state.ui,
-              currentView: view as any
+              currentView: view
             }
           }));
         },
@@ -1255,7 +1253,10 @@ export const usePlayerStore = create<AppState & AppActions>()(
       {
         name: 'music-player-store',
         partialize: (state) => ({
-          user: state.user,
+          user: {
+            ...state.user,
+            recentPlayed: state.user.recentPlayed
+          },
           ui: {
             theme: state.ui.theme,
             sidebarCollapsed: state.ui.sidebarCollapsed
@@ -1273,11 +1274,6 @@ export const usePlayerStore = create<AppState & AppActions>()(
           queue: {
             songs: state.queue.songs,
             currentIndex: state.queue.currentIndex
-          },
-          // 确保用户数据包含最近播放
-          user: {
-            ...state.user,
-            recentPlayed: state.user.recentPlayed
           }
         })
       }

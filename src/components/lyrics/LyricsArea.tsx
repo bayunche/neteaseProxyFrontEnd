@@ -26,19 +26,20 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
   const lyricRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [userScrolling, setUserScrolling] = useState(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isAutoScrolling = useRef(false);
 
   // 当歌曲变化时加载歌词
   useEffect(() => {
     if (currentSong) {
-      loadLyrics(String(currentSong.id));
+      loadLyrics(String(currentSong.id)).catch(console.error);
     }
   }, [currentSong, loadLyrics]);
 
-  // 更新当前歌词行
+  // 更新当前歌词行 - 修复时间同步问题
   useEffect(() => {
-    if (currentLyrics?.lines?.length > 0) {
+    if (currentLyrics?.lines && currentLyrics.lines.length > 0 && currentTime > 0) {
+      // 确保时间参数正确传递，不进行额外的单位转换
       updateCurrentLyricLine(currentTime);
     }
   }, [currentTime, updateCurrentLyricLine, currentLyrics]);
@@ -65,7 +66,7 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
       
       scrollTimeoutRef.current = setTimeout(() => {
         setUserScrolling(false);
-      }, 3000);
+      }, 2000); // 缩短用户滚动禁用时间
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
@@ -78,13 +79,15 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
     };
   }, [onScrollToTop]);
 
-  // 网易云风格的歌词滚动
+  // 网易云风格的歌词滚动 - 改进滚动逻辑
   useEffect(() => {
+    // 如果用户正在滚动，跳过自动滚动
     if (userScrolling) return;
     
     const container = lyricsContainerRef.current;
     
-    if (!container || !currentLyrics?.lines?.length || currentLineIndex === -1 || currentLineIndex >= currentLyrics.lines.length) {
+    // 放宽滚动条件，提高滚动成功率
+    if (!container || !currentLyrics?.lines?.length || currentLineIndex < 0) {
       return;
     }
 
@@ -92,7 +95,8 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
       const activeLine = lyricRefs.current[currentLineIndex];
       
       if (!activeLine) {
-        setTimeout(scrollToActiveLine, 100);
+        // 减少重试延迟
+        setTimeout(scrollToActiveLine, 50);
         return;
       }
 
@@ -104,21 +108,32 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
       const maxScrollTop = container.scrollHeight - containerHeight;
       const finalScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
       
-      isAutoScrolling.current = true;
+      // 检查是否需要滚动（避免不必要的滚动）
+      const currentScroll = container.scrollTop;
+      const scrollThreshold = 50; // 50px 的滚动阈值
       
-      // 使用更平滑的滚动动画
-      container.scrollTo({
-        top: finalScrollTop,
-        behavior: 'smooth'
-      });
-      
-      setTimeout(() => {
-        isAutoScrolling.current = false;
-      }, 1000);
+      if (Math.abs(finalScrollTop - currentScroll) > scrollThreshold) {
+        isAutoScrolling.current = true;
+        
+        // 使用更平滑的滚动动画
+        container.scrollTo({
+          top: finalScrollTop,
+          behavior: 'smooth'
+        });
+        
+        // 缩短自动滚动标记时间
+        setTimeout(() => {
+          isAutoScrolling.current = false;
+        }, 800);
+      }
     };
 
-    // 立即执行滚动，不延迟
-    scrollToActiveLine();
+    // 添加小延迟确保DOM更新完成
+    const scrollTimer = setTimeout(scrollToActiveLine, 100);
+    
+    return () => {
+      clearTimeout(scrollTimer);
+    };
   }, [currentLineIndex, userScrolling, currentLyrics]);
 
   const handleScrollToCurrentLine = () => {
@@ -194,17 +209,11 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
                     }}
                     className={cn(
                       'text-center py-6 px-6 transition-all duration-500 ease-out cursor-pointer relative',
-                      'min-h-[80px] flex items-center justify-center',
+                      'min-h-[100px] flex flex-col items-center justify-center',
                       // 网易云风格的文字大小和透明度变化
                       isCurrentLine 
-                        ? 'text-3xl font-bold text-white drop-shadow-lg transform scale-105' 
-                        : distanceFromCurrent === 1
-                        ? 'text-xl text-white/80 font-medium'
-                        : distanceFromCurrent === 2
-                        ? 'text-lg text-white/60'
-                        : distanceFromCurrent <= 3
-                        ? 'text-base text-white/40'
-                        : 'text-sm text-white/20'
+                        ? 'transform scale-105' 
+                        : ''
                     )}
                     style={{
                       // 添加渐变效果，让歌词更有层次感
@@ -219,7 +228,7 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
                       }
                       scrollTimeoutRef.current = setTimeout(() => {
                         setUserScrolling(false);
-                      }, 2000);
+                      }, 1500); // 点击后快速恢复自动滚动
                     }}
                   >
                     {/* 当前歌词高亮效果 */}
@@ -227,9 +236,39 @@ const LyricsArea: React.FC<LyricsAreaProps> = ({ onReturnToSongContent, onScroll
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-lg"></div>
                     )}
                     
-                    <span className="relative z-10 block leading-relaxed max-w-3xl">
+                    {/* 原文歌词 */}
+                    <div className={cn(
+                      'relative z-10 block leading-relaxed max-w-3xl transition-all duration-500',
+                      isCurrentLine 
+                        ? 'text-3xl font-bold text-white drop-shadow-lg' 
+                        : distanceFromCurrent === 1
+                        ? 'text-xl text-white/80 font-medium'
+                        : distanceFromCurrent === 2
+                        ? 'text-lg text-white/60'
+                        : distanceFromCurrent <= 3
+                        ? 'text-base text-white/40'
+                        : 'text-sm text-white/20'
+                    )}>
                       {line.text}
-                    </span>
+                    </div>
+
+                    {/* 翻译歌词 */}
+                    {line.translation && (
+                      <div className={cn(
+                        'relative z-10 block leading-relaxed max-w-3xl mt-2 transition-all duration-500',
+                        isCurrentLine 
+                          ? 'text-lg text-white/90 font-medium drop-shadow-md' 
+                          : distanceFromCurrent === 1
+                          ? 'text-base text-white/70'
+                          : distanceFromCurrent === 2
+                          ? 'text-sm text-white/50'
+                          : distanceFromCurrent <= 3
+                          ? 'text-xs text-white/30'
+                          : 'text-xs text-white/15'
+                      )}>
+                        {line.translation}
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -12,6 +12,7 @@ import {
   Type
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { formatTime } from '../../utils/timeFormat';
 import { usePlayerStore } from '../../stores';
 import { PlayMode } from '../../types';
 import ProgressBar from './ProgressBar';
@@ -73,11 +74,6 @@ const PlayerBar: React.FC = () => {
     setPlayMode(modes[nextIndex]);
   };
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
   const handleSongImageClick = () => {
     if (currentSong) {

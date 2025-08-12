@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '../../utils/cn';
+import { formatTime } from '../../utils/timeFormat';
 
 interface ProgressBarProps {
   currentTime: number;
@@ -28,11 +29,6 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const bufferedPercent = duration ? (buffered / duration) * 100 : 0;
   const displayPercent = isDragging ? dragValue : progressPercent;
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const updateFromEvent = useCallback((e: MouseEvent | React.MouseEvent) => {
     if (!progressRef.current || !duration) return null;

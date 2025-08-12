@@ -19,17 +19,19 @@ export interface UserBinding {
 }
 
 // 搜索相关类型
-export enum SearchType {
-  SONG = 1,
-  ALBUM = 10,
-  ARTIST = 100,
-  PLAYLIST = 1000,
-  USER = 1002,
-  MV = 1004,
-  LYRIC = 1006,
-  DJ = 1009,
-  VIDEO = 1014
-}
+export const SearchType = {
+  SONG: 1,
+  ALBUM: 10,
+  ARTIST: 100,
+  PLAYLIST: 1000,
+  USER: 1002,
+  MV: 1004,
+  LYRIC: 1006,
+  DJ: 1009,
+  VIDEO: 1014
+} as const;
+
+export type SearchType = typeof SearchType[keyof typeof SearchType];
 
 export interface SearchRequest {
   keywords: string;
@@ -42,7 +44,7 @@ export interface SearchResult {
   songs?: Song[];
   albums?: Album[];
   artists?: Artist[];
-  playlists?: Playlist[];
+  playlists?: ApiPlaylist[];
   songCount?: number;
   albumCount?: number;
   artistCount?: number;
@@ -76,7 +78,7 @@ export interface Album {
   publishTime?: number;
 }
 
-export interface Playlist {
+export interface ApiPlaylist {
   id: number;
   name: string;
   coverImgUrl?: string;
@@ -143,6 +145,126 @@ export interface User {
   birthday?: number;
 }
 
+// Playlist API 类型定义
+export interface ApiTrack {
+  id: number;
+  name: string;
+  artists?: ApiArtist[];
+  ar?: ApiArtist[];
+  album?: ApiAlbum;
+  al?: ApiAlbum;
+  duration?: number;
+  dt?: number;
+  fee?: number;
+  mvid?: number;
+  mv?: number;
+}
+
+export interface ApiArtist {
+  id: number;
+  name: string;
+  picUrl?: string;
+  img1v1Url?: string;
+  alias?: string[];
+}
+
+export interface ApiAlbum {
+  id: number;
+  name: string;
+  picUrl?: string;
+  picId?: string;
+  artist?: ApiArtist;
+  publishTime?: number;
+}
+
+export interface ApiPlaylistData {
+  id: number;
+  name: string;
+  description?: string;
+  coverImgUrl?: string;
+  creator?: {
+    nickname: string;
+  };
+  tracks?: ApiTrack[];
+  trackIds?: { id: number }[];
+  privacy?: boolean;
+  createTime?: number;
+  updateTime?: number;
+  trackCount?: number;
+  playCount?: number;
+}
+
+export interface SongDetailResponse extends APIResponse {
+  songs: ApiTrack[];
+}
+
+export interface PlaylistDetailResponse extends APIResponse {
+  playlist: ApiPlaylistData;
+}
+
+// Search API 类型定义
+export interface SearchResponse extends APIResponse {
+  result?: {
+    songs?: ApiTrack[];
+    albums?: ApiAlbum[];
+    artists?: ApiArtist[];
+    playlists?: ApiPlaylistData[];
+    songCount?: number;
+    albumCount?: number;
+    artistCount?: number;
+    playlistCount?: number;
+  };
+}
+
+export interface ApiPlaylistForSearch {
+  id: number;
+  name: string;
+  coverImgUrl?: string;
+  description?: string;
+  creator?: {
+    userId: number;
+    nickname: string;
+    avatarUrl: string;
+  };
+  trackCount?: number;
+  playCount?: number;
+}
+
+// Song API 类型定义（重新定义 SongUrlResponse 覆盖之前的定义）
+
+export interface SongLyricResponse extends APIResponse {
+  data?: {
+    lrc?: {
+      lyric?: string;
+    };
+    tlyric?: {
+      lyric?: string;
+    };
+  };
+}
+
+export interface SongDetailApiResponse extends APIResponse {
+  songs: Array<{
+    id: number;
+    name: string;
+    ar?: Array<{
+      id: number;
+      name: string;
+      picUrl?: string;
+      alias?: string[];
+    }>;
+    al?: {
+      id: number;
+      name: string;
+      picUrl?: string;
+      publishTime?: number;
+    };
+    dt?: number;
+    fee?: number;
+    mv?: number;
+  }>;
+}
+
 export interface LoginRequest {
   phone: string;
   password: string;
@@ -180,45 +302,6 @@ export interface UserStatus {
     level: number;
     mobileSign: boolean;
     pcSign: boolean;
-    profile: {
-      userId: number;
-      userType: number;
-      nickname: string;
-      avatarImgId: number;
-      avatarUrl: string;
-      backgroundImgId: number;
-      backgroundUrl: string;
-      signature: string;
-      createTime: number;
-      userName: string;
-      accountType: number;
-      shortUserName: string;
-      birthday: number;
-      authority: number;
-      gender: number;
-      accountStatus: number;
-      province: number;
-      city: number;
-      authStatus: number;
-      description: string;
-      detailDescription: string;
-      defaultAvatar: boolean;
-      expertTags: string[];
-      experts: Record<string, unknown>[];
-      djStatus: number;
-      locationStatus: number;
-      vipType: number;
-      followed: boolean;
-      mutual: boolean;
-      authenticated: boolean;
-      lastLoginTime: number;
-      lastLoginIP: string;
-      remarkName: string;
-      viptypeVersion: number;
-      authenticationTypes: number;
-      avatarDetail: Record<string, unknown> | null;
-      anchor: boolean;
-    };
   };
 }
 
@@ -230,10 +313,11 @@ export interface UserPlaylistRequest {
 }
 
 // 用户歌单列表响应
-export interface UserPlaylistResponse extends APIResponse {
+export interface UserPlaylistResponse {
+  code: number;
   version: string;
   more: boolean;
-  playlist: Playlist[];
+  playlist: ApiPlaylist[];
 }
 
 // 歌单详情请求参数
@@ -242,160 +326,18 @@ export interface PlaylistDetailRequest {
   s?: number; // 最近的收藏者数量,默认为10
 }
 
-// 歌单详情响应
-export interface PlaylistDetailResponse extends APIResponse {
-  playlist: {
-    id: number;
-    name: string;
-    coverImgId: number;
-    coverImgUrl: string;
-    coverImgId_str: string;
-    adType: number;
-    userId: number;
-    createTime: number;
-    status: number;
-    opRecommend: boolean;
-    highQuality: boolean;
-    newImported: boolean;
-    updateTime: number;
-    trackCount: number;
-    specialType: number;
-    privacy: number;
-    trackUpdateTime: number;
-    commentThreadId: string;
-    playCount: number;
-    trackNumberUpdateTime: number;
-    subscribedCount: number;
-    cloudTrackCount: number;
-    ordered: boolean;
-    description: string;
-    tags: string[];
-    updateFrequency: string;
-    backgroundCoverId: number;
-    backgroundCoverUrl: string;
-    titleImage: number;
-    titleImageUrl: string;
-    englishTitle: string;
-    officialPlaylistType: string;
-    copied: boolean;
-    relateResType: string;
-    subscribers: User[];
-    subscribed: boolean;
-    creator: {
-      defaultAvatar: boolean;
-      province: number;
-      authStatus: number;
-      followed: boolean;
-      avatarUrl: string;
-      accountStatus: number;
-      gender: number;
-      city: number;
-      birthday: number;
-      userId: number;
-      userType: number;
-      nickname: string;
-      signature: string;
-      description: string;
-      detailDescription: string;
-      avatarImgId: number;
-      backgroundImgId: number;
-      backgroundUrl: string;
-      authority: number;
-      mutual: boolean;
-      expertTags: string[];
-      experts: Record<string, unknown>[];
-      djStatus: number;
-      vipType: number;
-      remarkName: string;
-      authenticationTypes: number;
-      avatarDetail: Record<string, unknown> | null;
-      avatarImgIdStr: string;
-      backgroundImgIdStr: string;
-      anchor: boolean;
-      avatarImgId_str: string;
-    };
-    tracks: Song[]; // 歌曲列表，可能为空（超过1000首时）
-    videoIds: string[];
-    videos: Record<string, unknown>[];
-    trackIds: Array<{
-      id: number;
-      v: number;
-      t: number;
-      at: number;
-      alg: string;
-      uid: number;
-      rcmdReason: string;
-      sc: Record<string, unknown>;
-      f: Record<string, unknown>;
-      sr: Record<string, unknown>;
-    }>;
-    shareCount: number;
-    commentCount: number;
-    remixVideo: Record<string, unknown> | null;
-    sharedUsers: User[];
-    historySharedUsers: User[];
-    gradeStatus: string;
-    score: number | null;
-    algTags: string[];
-    trialMode: number;
-    displayTags: string[];
-    platFormAlgTags: string[];
-    upateTime: number;
-  };
-  privileges: Record<string, unknown>[];
-}
+// API 错误类型定义
+export const APIErrorType = {
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  SERVER_ERROR: 'SERVER_ERROR',
+  NOT_FOUND: 'NOT_FOUND',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  INVALID_PARAMS: 'INVALID_PARAMS'
+} as const;
 
-// 歌曲详情相关类型
-export interface SongDetailRequest {
-  ids: number[] | string;
-}
-
-export interface SongDetailResponse extends APIResponse {
-  songs: Song[];
-  privileges: Record<string, unknown>[];
-}
-
-// 歌词相关类型
-export interface LyricRequest {
-  id: number | string;
-}
-
-export interface LyricLine {
-  time: number;
-  text: string;
-}
-
-export interface LyricResponse extends APIResponse {
-  sgc: boolean;
-  sfy: boolean;
-  qfy: boolean;
-  lrc?: {
-    version: number;
-    lyric: string;
-  };
-  klyric?: {
-    version: number;
-    lyric: string;
-  };
-  tlyric?: {
-    version: number;
-    lyric: string;
-  };
-  romalrc?: {
-    version: number;
-    lyric: string;
-  };
-}
-
-// API错误类型
-export enum APIErrorType {
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  SERVER_ERROR = 'SERVER_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
-  VALIDATION_ERROR = 'VALIDATION_ERROR'
-}
+export type APIErrorType = typeof APIErrorType[keyof typeof APIErrorType];
 
 export class APIError extends Error {
   constructor(

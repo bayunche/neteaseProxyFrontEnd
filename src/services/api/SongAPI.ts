@@ -2,14 +2,12 @@ import { neteaseAPI } from './NetEaseAPI';
 import { API_ENDPOINTS, AUDIO_QUALITY } from './config';
 import { getAudioProxyUrl, getImageProxyUrl } from './proxy-config';
 import type { 
-  SongUrlRequest,
-  SongUrlResponse,
-  SongDetailRequest,
-  SongDetailResponse,
   Song,
-  APIResponse
+  SongUrlResponse,
+  SongLyricResponse,
+  SongDetailApiResponse
 } from './types';
-import { logger, isSongPlayable } from './utils';
+import { logger } from './utils';
 
 /**
  * 歌曲API服务类
@@ -32,7 +30,7 @@ export class SongAPI {
     logger.info(`获取歌曲播放URL: ${id}, 音质: ${br}`);
 
     try {
-      const response = await neteaseAPI.get<any>(
+      const response = await neteaseAPI.get<SongUrlResponse>(
         API_ENDPOINTS.SONG_URL,
         { id, br }
       );
@@ -104,7 +102,7 @@ export class SongAPI {
         })
       );
 
-      promises.push(batchPromise);
+      promises.push(batchPromise.then(() => {}));
     }
 
     await Promise.all(promises);
@@ -155,13 +153,13 @@ export class SongAPI {
     logger.info(`获取歌曲详情: ${idsString}`);
 
     try {
-      const response = await neteaseAPI.get<any>(
+      const response = await neteaseAPI.get<SongDetailApiResponse>(
         API_ENDPOINTS.SONG_DETAIL,
         { ids: idsString }
       );
 
       // NetEase API 响应结构检查
-      if (!response.songs) {
+      if (!response.songs || !Array.isArray(response.songs)) {
         logger.warn(`未找到歌曲详情: ${idsString}`);
         return [];
       }
@@ -272,7 +270,7 @@ export class SongAPI {
     logger.info(`获取歌曲歌词: ${id}`);
 
     try {
-      const response = await neteaseAPI.get<any>(
+      const response = await neteaseAPI.get<SongLyricResponse>(
         API_ENDPOINTS.SONG_LYRIC,
         { id }
       );
@@ -282,8 +280,8 @@ export class SongAPI {
       }
 
       // 合并歌词和翻译歌词
-      let lyric = response.data.lrc?.lyric || '';
-      const tlyric = response.data.tlyric?.lyric || '';
+      let lyric = response.data?.lrc?.lyric || '';
+      const tlyric = response.data?.tlyric?.lyric || '';
 
       if (tlyric) {
         // 这里可以实现歌词和翻译的合并逻辑
@@ -345,24 +343,24 @@ export class SongAPI {
   /**
    * 格式化歌曲详情数据
    */
-  private static formatSongDetail(rawSong: any): Song {
+  private static formatSongDetail(rawSong: SongDetailApiResponse['songs'][0]): Song {
     return {
       id: rawSong.id,
       name: rawSong.name,
-      artists: rawSong.ar?.map((artist: any) => ({
+      artists: rawSong.ar?.map((artist) => ({
         id: artist.id,
         name: artist.name,
         picUrl: artist.picUrl ? this.convertToImageProxyUrl(artist.picUrl) : artist.picUrl,
         alias: artist.alias
       })) || [],
       album: {
-        id: rawSong.al?.id,
-        name: rawSong.al?.name,
-        picUrl: rawSong.al?.picUrl ? this.convertToImageProxyUrl(rawSong.al?.picUrl) : rawSong.al?.picUrl,
+        id: rawSong.al?.id || 0,
+        name: rawSong.al?.name || '未知专辑',
+        picUrl: rawSong.al?.picUrl ? this.convertToImageProxyUrl(rawSong.al?.picUrl) : '',
         publishTime: rawSong.al?.publishTime
       },
       duration: rawSong.dt || 0,
-      picUrl: rawSong.al?.picUrl ? this.convertToImageProxyUrl(rawSong.al?.picUrl) : rawSong.al?.picUrl,
+      picUrl: rawSong.al?.picUrl ? this.convertToImageProxyUrl(rawSong.al?.picUrl) : '',
       fee: rawSong.fee,
       mvid: rawSong.mv
     };

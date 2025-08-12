@@ -4,8 +4,7 @@ import type {
   WeeklyStats, 
   MonthlyStats, 
   PlayStats, 
-  Song,
-  PlayMode 
+  Song
 } from '../types';
 
 /**
@@ -40,7 +39,7 @@ export class StatsService {
       const stored = localStorage.getItem(StatsService.HISTORY_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        this.playHistory = parsed.map((entry: any) => ({
+        this.playHistory = parsed.map((entry: PlayHistoryEntry & { playedAt: string }) => ({
           ...entry,
           playedAt: new Date(entry.playedAt)
         }));
@@ -73,7 +72,7 @@ export class StatsService {
   /**
    * 开始播放会话
    */
-  startPlaySession(song: Song, source: PlayHistoryEntry['source'] = 'manual'): void {
+  startPlaySession(song: Song): void {
     this.currentSession = {
       startTime: new Date(),
       songId: song.id,
@@ -150,7 +149,7 @@ export class StatsService {
   /**
    * 更新播放进度
    */
-  updatePlayProgress(currentTime: number, duration: number): void {
+  updatePlayProgress(): void {
     // 可以用于实时更新当前播放状态
     // 比如检测是否跳过歌曲、暂停时间等
   }
@@ -171,9 +170,8 @@ export class StatsService {
   /**
    * 播放模式变化事件
    */
-  onPlayModeChange(mode: PlayMode): void {
+  onPlayModeChange(): void {
     // 记录播放模式使用情况
-    const today = this.formatDate(new Date());
     // 这里可以记录模式切换统计
   }
 
@@ -559,7 +557,7 @@ export class StatsService {
     try {
       const parsed = JSON.parse(data);
       if (parsed.history && Array.isArray(parsed.history)) {
-        this.playHistory = parsed.history.map((entry: any) => ({
+        this.playHistory = parsed.history.map((entry: PlayHistoryEntry & { playedAt: string }) => ({
           ...entry,
           playedAt: new Date(entry.playedAt)
         }));

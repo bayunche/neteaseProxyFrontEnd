@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { usePlayerStore } from '../stores';
 import { cn } from '../utils/cn';
-import type { PlayStats, DailyStats, WeeklyStats } from '../types';
+import type { PlayStats } from '../types';
 
 const StatsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'weekly' | 'monthly'>('overview');
@@ -156,7 +156,7 @@ const StatsPage: React.FC = () => {
     </div>
   );
 
-  const TopSongsList: React.FC<{ songs: Array<{ song: any; playCount: number; totalDuration: number }> }> = ({ songs }) => (
+  const TopSongsList: React.FC<{ songs: Array<{ song: { id: string; title: string; artist: string; coverUrl: string }; playCount: number; totalDuration: number }> }> = ({ songs }) => (
     <div className="space-y-3">
       {songs.slice(0, 5).map((item, index) => (
         <div key={item.song.id} className="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -253,7 +253,7 @@ const StatsPage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <select
                 value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value as any)}
+                onChange={(e) => setSelectedPeriod(e.target.value as 'week' | 'month' | 'year')}
                 className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
               >
                 <option value="week">最近一周</option>
@@ -273,7 +273,7 @@ const StatsPage: React.FC = () => {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => setActiveTab(tab.key as 'overview' | 'daily' | 'weekly' | 'monthly')}
                 className={cn(
                   'flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
                   activeTab === tab.key

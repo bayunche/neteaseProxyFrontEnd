@@ -74,7 +74,7 @@ export const LoginPanel: React.FC<LoginPanelProps> = ({
       console.log('登录成功:', result);
       
       if (onLoginSuccess && result.profile) {
-        onLoginSuccess(result.profile);
+        onLoginSuccess(result.profile as unknown as Record<string, unknown>);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '登录失败';
@@ -196,7 +196,7 @@ export const LoginPanel: React.FC<LoginPanelProps> = ({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="请输入手机号"
-              icon={<Smartphone className="w-4 h-4" />}
+              leftIcon={<Smartphone className="w-4 h-4" />}
               className="w-full"
               maxLength={11}
             />
@@ -223,7 +223,7 @@ export const LoginPanel: React.FC<LoginPanelProps> = ({
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="请输入验证码"
-              icon={<Key className="w-4 h-4" />}
+              leftIcon={<Key className="w-4 h-4" />}
               className="w-full"
               maxLength={6}
             />
@@ -245,7 +245,7 @@ export const LoginPanel: React.FC<LoginPanelProps> = ({
               onClick={countdown > 0 ? undefined : handleSendCode}
               disabled={loading || countdown > 0}
               className="px-4"
-              variant="outline"
+              variant="secondary"
             >
               {countdown > 0 ? `${countdown}s` : '重发'}
             </Button>

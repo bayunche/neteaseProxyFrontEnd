@@ -3,6 +3,7 @@ import { Plus, X, Image as ImageIcon } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { usePlayerStore } from '../../stores';
 import { Button, Input, Modal } from '../common';
+import type { Song } from '../../types';
 
 interface CreatePlaylistProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ const CreatePlaylist: React.FC<CreatePlaylistProps> = ({
       createPlaylist(
         formData.title.trim(),
         formData.description.trim(),
-        defaultSongs
+        defaultSongs as unknown as Song[]
       );
 
       // 重置表单
