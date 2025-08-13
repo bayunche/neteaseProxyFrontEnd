@@ -1,0 +1,141 @@
+name: Build Mobile App
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'packages/mobile/**'
+      - 'packages/shared/**'
+      - '.github/workflows/mobile-build.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'packages/mobile/**'
+      - 'packages/shared/**'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build shared package
+        run: npm run build --workspace=packages/shared
+        
+      - name: Lint Mobile package
+        run: npm run lint --workspace=packages/mobile
+        
+      - name: Run tests
+        run: npm run test --workspace=packages/mobile
+        
+      - name: Build Android (Development)
+        if: github.event_name == 'pull_request'
+        working-directory: packages/mobile
+        run: eas build --platform android --profile development --non-interactive
+        
+      - name: Build Android (Preview)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        working-directory: packages/mobile
+        run: eas build --platform android --profile preview --non-interactive
+        
+      - name: Build Android (Production)
+        if: contains(github.event.head_commit.message, '[release]')
+        working-directory: packages/mobile
+        run: eas build --platform android --profile production --non-interactive
+        
+      - name: Submit to Google Play (Internal Testing)
+        if: contains(github.event.head_commit.message, '[release]')
+        working-directory: packages/mobile
+        run: eas submit --platform android --profile internal
+        
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build shared package
+        run: npm run build --workspace=packages/shared
+        
+      - name: Build iOS (Development)
+        if: github.event_name == 'pull_request'
+        working-directory: packages/mobile
+        run: eas build --platform ios --profile development --non-interactive
+        
+      - name: Build iOS (Preview)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        working-directory: packages/mobile
+        run: eas build --platform ios --profile preview --non-interactive
+        
+      - name: Build iOS (Production)
+        if: contains(github.event.head_commit.message, '[release]')
+        working-directory: packages/mobile
+        run: eas build --platform ios --profile production --non-interactive
+        
+      - name: Submit to App Store (TestFlight)
+        if: contains(github.event.head_commit.message, '[release]')
+        working-directory: packages/mobile
+        run: eas submit --platform ios --profile testflight
+
+  update-ota:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build shared package
+        run: npm run build --workspace=packages/shared
+        
+      - name: Publish OTA Update
+        working-directory: packages/mobile
+        run: eas update --auto --non-interactive

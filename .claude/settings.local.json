@@ -23,7 +23,9 @@
       "Bash(npx tsc:*)",
       "Bash(wmic process where:*)",
       "Bash(sed:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
