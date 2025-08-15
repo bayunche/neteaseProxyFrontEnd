@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Clock, TrendingUp } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
-import { SearchAPI } from '../../services/api';
+import { usePlayerStore } from "@music-player/shared/stores";
+import { SearchAPI } from "@music-player/shared";
 
 interface SearchBarProps {
   className?: string;

@@ -3,13 +3,21 @@
  * 统一使用公网代理服务器解决CORS问题
  */
 
+// 环境变量获取函数
+const getEnvVar = (key: string): string | undefined => {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+};
+
 // 代理服务器配置
 export const PROXY_CONFIG = {
   // 开发环境代理（统一使用公网服务器）
-  LOCAL: (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_AUDIO_PROXY_LOCAL : process.env.VITE_AUDIO_PROXY_LOCAL) || 'http://8.134.196.44:3001',
+  LOCAL: getEnvVar('VITE_AUDIO_PROXY_LOCAL') || 'http://8.134.196.44:3001',
   
   // 生产环境代理（公网服务器地址）
-  PRODUCTION: (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_AUDIO_PROXY_PRODUCTION : process.env.VITE_AUDIO_PROXY_PRODUCTION) || 'http://8.134.196.44:3001',
+  PRODUCTION: getEnvVar('VITE_AUDIO_PROXY_PRODUCTION') || 'http://8.134.196.44:3001',
   
   // 代理端点路径
   AUDIO_ENDPOINT: '/audio-proxy',
@@ -22,12 +30,17 @@ export const PROXY_CONFIG = {
  */
 export function getProxyBaseUrl(): string {
   // 检测环境（虽然两个环境都使用同一个服务器）
-  const isDevelopment = (typeof import.meta !== 'undefined' ? import.meta.env?.DEV : process.env.NODE_ENV === 'development') || 
-                       (typeof window !== 'undefined' && (
-                         window.location.hostname === 'localhost' ||
-                         window.location.hostname === '127.0.0.1' ||
-                         window.location.hostname.includes('192.168.')
-                       ));
+  const isDevelopment = (() => {
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+      return true;
+    }
+    if (typeof window !== 'undefined') {
+      return window.location.hostname === 'localhost' ||
+             window.location.hostname === '127.0.0.1' ||
+             window.location.hostname.includes('192.168.');
+    }
+    return false;
+  })();
 
   return isDevelopment ? PROXY_CONFIG.LOCAL : PROXY_CONFIG.PRODUCTION;
 }
@@ -82,10 +95,15 @@ export function getProxyUrl(originalUrl: string): string {
 export async function checkProxyHealth(): Promise<boolean> {
   try {
     const baseUrl = getProxyBaseUrl();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
     const response = await fetch(`${baseUrl}/health`, {
       method: 'GET',
-      timeout: 5000
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (response.ok) {
       const data = await response.json();
@@ -108,7 +126,8 @@ export function getProxyInfo() {
   
   return {
     baseUrl,
-    endpoint: PROXY_CONFIG.ENDPOINT,
+    audioEndpoint: PROXY_CONFIG.AUDIO_ENDPOINT,
+    imageEndpoint: PROXY_CONFIG.IMAGE_ENDPOINT,
     isDevelopment,
     environment: isDevelopment ? 'development' : 'production',
     healthCheckUrl: `${baseUrl}/health`,

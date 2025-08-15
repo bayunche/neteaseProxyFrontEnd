@@ -1,4 +1,4 @@
-name: Build Mobile App
+name: Expo Mobile Build & Deploy
 
 on:
   push:

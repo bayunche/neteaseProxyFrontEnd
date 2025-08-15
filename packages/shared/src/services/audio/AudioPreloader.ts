@@ -246,7 +246,7 @@ export class AudioPreloader {
    * 预加载单首歌曲
    */
   async preloadSong(song: Song, priority: number, reason: string): Promise<void> {
-    const songId = song.id;
+    const songId = String(song.id);
     
     // 检查是否已经在缓存中
     if (this.cache.has(songId)) {
@@ -428,14 +428,14 @@ export class AudioPreloader {
         }
         break;
         
-      case 'loop':
+      case 'list_loop':
         for (let i = 1; i <= count; i++) {
           const index = (currentIndex + i) % playlist.length;
           songs.push(playlist[index]);
         }
         break;
         
-      case 'shuffle':
+      case 'random':
         // 基于随机算法预测可能的下一首歌
         const remaining = playlist.filter((_, index) => index !== currentIndex);
         const shuffled = this.shuffleArray([...remaining]).slice(0, count);
@@ -480,9 +480,10 @@ export class AudioPreloader {
     const unique = new Map<string, { song: Song; priority: number; reason: string }>();
     
     candidates.forEach(candidate => {
-      const existing = unique.get(candidate.song.id);
+      const candidateId = String(candidate.song.id);
+      const existing = unique.get(candidateId);
       if (!existing || candidate.priority > existing.priority) {
-        unique.set(candidate.song.id, candidate);
+        unique.set(candidateId, candidate);
       }
     });
     

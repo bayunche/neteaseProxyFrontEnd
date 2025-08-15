@@ -13,9 +13,9 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
-import { usePlayerStore } from '../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { cn } from '../utils/cn';
-import type { PlayStats } from '../types';
+import type { PlayStats } from "@music-player/shared/types";
 
 const StatsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'daily' | 'weekly' | 'monthly'>('overview');

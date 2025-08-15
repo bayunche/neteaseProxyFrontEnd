@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Upload, Music, X, FileAudio } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from './Button';
-import type { Song } from '../../types';
+import type { Song } from "@music-player/shared/types";
 
 interface FileUploadProps {
   onFileUpload: (songs: Song[]) => void;

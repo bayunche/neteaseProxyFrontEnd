@@ -45,8 +45,8 @@ export class PlaylistAPI {
         }
       );
 
-      if (response.code === 200 && response.playlist) {
-        const apiPlaylist = response.playlist;
+      if (response.code === 200 && (response as any).playlist) {
+        const apiPlaylist = (response as any).playlist;
 
         // 处理歌曲列表
         let songs: Song[] = [];
@@ -126,7 +126,7 @@ export class PlaylistAPI {
       );
 
       if (response.code === 200 && response.songs) {
-        const songs = response.songs.map((song: ApiTrack) => this.formatSong(song));
+        const songs = ((response as any).songs || []).map((song: ApiTrack) => this.formatSong(song));
         logger.info(`获取歌曲详情成功: ${songs.length}首`);
         return songs;
       } else {

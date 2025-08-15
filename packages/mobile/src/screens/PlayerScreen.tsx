@@ -32,9 +32,10 @@ export default function PlayerScreen() {
   const navigation = useNavigation();
   const { 
     player, 
-    togglePlayPause, 
-    playNext, 
-    playPrevious,
+    play,
+    pause, 
+    next, 
+    previous,
     setCurrentTime,
   } = usePlayerStore();
   
@@ -195,14 +196,14 @@ export default function PlayerScreen() {
             
             <TouchableOpacity 
               style={styles.controlButton}
-              onPress={playPrevious}
+              onPress={previous}
             >
               <Ionicons name="play-skip-back" size={32} color={theme.colors.text} />
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.playButton}
-              onPress={togglePlayPause}
+              onPress={() => isPlaying ? pause() : play()}
             >
               <Ionicons 
                 name={isPlaying ? "pause" : "play"} 
@@ -213,7 +214,7 @@ export default function PlayerScreen() {
             
             <TouchableOpacity 
               style={styles.controlButton}
-              onPress={playNext}
+              onPress={next}
             >
               <Ionicons name="play-skip-forward" size={32} color={theme.colors.text} />
             </TouchableOpacity>

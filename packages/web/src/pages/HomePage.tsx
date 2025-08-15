@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Heart, Music, Clock, Plus, PlayCircle, Settings } from 'lucide-react';
-import { usePlayerStore } from '../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { SearchBar, SearchResults } from '../components/search';
 import { PlaylistCard, CreatePlaylist } from '../components/playlist';
 import { SongList } from '../components/music';

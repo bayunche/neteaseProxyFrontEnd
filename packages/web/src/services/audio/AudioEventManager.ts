@@ -1,4 +1,4 @@
-import type { AudioEvent } from '../../types';
+import type { AudioEvent } from "@music-player/shared/types";
 
 export type AudioEventCallback = (data?: unknown) => void;
 

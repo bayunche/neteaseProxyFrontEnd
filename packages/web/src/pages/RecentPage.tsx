@@ -9,9 +9,9 @@ import {
   Download,
   Search
 } from 'lucide-react';
-import { usePlayerStore } from '../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { cn } from '../utils/cn';
-import type { Song, PlayHistoryEntry } from '../types';
+import type { Song, PlayHistoryEntry } from "@music-player/shared/types";
 
 const RecentPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'all'>('all');

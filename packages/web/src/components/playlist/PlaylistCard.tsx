@@ -1,8 +1,8 @@
 import React from 'react';
 import { Play, Music, Heart, MoreHorizontal, Lock } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
-import type { Playlist } from '../../types';
+import { usePlayerStore } from "@music-player/shared/stores";
+import type { Playlist } from "@music-player/shared/types";
 
 interface PlaylistCardProps {
   playlist: Playlist;

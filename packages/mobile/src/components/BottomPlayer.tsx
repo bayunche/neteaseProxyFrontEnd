@@ -23,7 +23,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function BottomPlayer() {
   const navigation = useNavigation();
-  const { player, togglePlayPause, playNext, playPrevious } = usePlayerStore();
+  const { player, play, pause, next, previous } = usePlayerStore();
   const { currentSong, isPlaying, currentTime, duration } = player;
   
   const progressValue = useSharedValue(0);
@@ -119,7 +119,7 @@ export default function BottomPlayer() {
         <View style={styles.controls}>
           <TouchableOpacity 
             style={styles.controlButton}
-            onPress={playPrevious}
+            onPress={previous}
           >
             <Ionicons 
               name="play-skip-back" 
@@ -131,7 +131,7 @@ export default function BottomPlayer() {
           <Animated.View style={playButtonStyle}>
             <TouchableOpacity 
               style={styles.playButton}
-              onPress={togglePlayPause}
+              onPress={() => isPlaying ? pause() : play()}
             >
               <Ionicons 
                 name={isPlaying ? "pause" : "play"} 
@@ -143,7 +143,7 @@ export default function BottomPlayer() {
           
           <TouchableOpacity 
             style={styles.controlButton}
-            onPress={playNext}
+            onPress={next}
           >
             <Ionicons 
               name="play-skip-forward" 

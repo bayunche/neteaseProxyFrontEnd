@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { formatTime } from '../../utils/timeFormat';
-import { usePlayerStore } from '../../stores';
-import { PlayMode } from '../../types';
+import { usePlayerStore } from "@music-player/shared/stores";
+import { PlayMode } from "@music-player/shared/types";
 import ProgressBar from './ProgressBar';
 import VolumeControl from './VolumeControl';
 

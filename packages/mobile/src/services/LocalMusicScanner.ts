@@ -472,8 +472,8 @@ export class LocalMusicScanner {
     
     // 移除常见的前缀模式
     const cleaned = nameWithoutExt
-      .replace(/^\d+[\s\-\.]*/, '') // 移除开头的数字
-      .replace(/^[\s\-\.]+/, '') // 移除开头的分隔符
+      .replace(/^\d+[\s\-.]*/, '') // 移除开头的数字
+      .replace(/^[\s\-.]+/, '') // 移除开头的分隔符
       .trim();
     
     return cleaned || nameWithoutExt;

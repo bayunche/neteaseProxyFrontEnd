@@ -1,9 +1,9 @@
 import React from 'react';
 import { X, Play, Pause, Shuffle, Trash2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
-import { formatSongDuration } from '../../services/api';
-import type { Song } from '../../types';
+import { usePlayerStore } from "@music-player/shared/stores";
+import { formatSongDuration } from "@music-player/shared";
+import type { Song } from "@music-player/shared/types";
 
 interface QueueSidebarProps {
   isOpen: boolean;

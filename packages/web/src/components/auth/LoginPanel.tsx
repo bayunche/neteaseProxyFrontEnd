@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Smartphone, Key, LogIn, User } from 'lucide-react';
 import { Button, Input, Loading } from '../common';
-import { AuthAPI } from '../../services/api/AuthAPI';
+import { AuthAPI } from '@music-player/shared';
 
 interface LoginPanelProps {
   className?: string;

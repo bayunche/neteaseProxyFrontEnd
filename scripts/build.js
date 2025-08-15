@@ -19,16 +19,6 @@ const BUILD_CONFIGS = {
     command: 'npm run build --workspace=packages/shared',
     description: '构建共享包'
   },
-  'web': {
-    command: 'npm run build --workspace=packages/web',
-    description: '构建Web应用',
-    dependencies: ['shared']
-  },
-  'web:analyze': {
-    command: 'npm run build:analyze --workspace=packages/web',
-    description: '构建Web应用并分析包大小',
-    dependencies: ['shared']
-  },
   'mobile': {
     command: 'npx expo export --platform all',
     description: '导出Mobile应用',
@@ -47,9 +37,15 @@ const BUILD_CONFIGS = {
     cwd: 'packages/mobile',
     dependencies: ['shared']
   },
+  'mobile:preview': {
+    command: 'eas build --platform all --profile preview',
+    description: '构建Mobile预览版',
+    cwd: 'packages/mobile',
+    dependencies: ['shared']
+  },
   'all': {
     description: '构建所有平台',
-    dependencies: ['shared', 'web', 'mobile']
+    dependencies: ['shared', 'mobile']
   }
 };
 
@@ -216,8 +212,7 @@ async function main() {
     if (target === 'all') {
       // 依次构建所有目标
       await buildTarget('shared');
-      await buildTarget('web');
-      console.log('📱 Mobile构建需要单独运行: npm run build:mobile');
+      await buildTarget('mobile');
     } else {
       await buildTarget(target);
     }

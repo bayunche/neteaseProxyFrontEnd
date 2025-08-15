@@ -15,29 +15,29 @@ const __dirname = path.dirname(__filename);
 
 // 部署配置
 const DEPLOY_CONFIGS = {
-  'web:vercel': {
-    command: 'vercel --prod',
-    description: '部署Web应用到Vercel',
-    cwd: 'packages/web',
-    env: 'production'
-  },
-  'web:netlify': {
-    command: 'netlify deploy --prod --dir dist',
-    description: '部署Web应用到Netlify',
-    cwd: 'packages/web',
-    env: 'production'
-  },
-  'web:preview': {
-    command: 'vercel',
-    description: '部署Web应用预览版到Vercel',
-    cwd: 'packages/web',
-    env: 'preview'
-  },
   'mobile:eas': {
     command: 'eas update --auto',
     description: '发布Mobile应用OTA更新',
     cwd: 'packages/mobile',
     env: 'production'
+  },
+  'mobile:build:android': {
+    command: 'eas build --platform android --profile production',
+    description: '构建Android应用',
+    cwd: 'packages/mobile',
+    env: 'production'
+  },
+  'mobile:build:ios': {
+    command: 'eas build --platform ios --profile production',
+    description: '构建iOS应用',
+    cwd: 'packages/mobile',
+    env: 'production'
+  },
+  'mobile:build:preview': {
+    command: 'eas build --platform all --profile preview',
+    description: '构建Mobile预览版',
+    cwd: 'packages/mobile',
+    env: 'preview'
   },
   'mobile:submit:android': {
     command: 'eas submit --platform android --profile production',
@@ -111,24 +111,21 @@ function executeCommand(command, options = {}) {
 async function checkPrerequisites(config) {
   console.log('🔍 检查部署前置条件...');
 
-  // 检查构建产物
-  if (target.startsWith('web:')) {
-    const distPath = path.join(process.cwd(), 'packages/web/dist');
-    if (!fs.existsSync(distPath)) {
-      throw new Error('Web应用未构建，请先运行: npm run build:web');
+  // 检查Mobile应用配置
+  if (target.includes('mobile')) {
+    const appJsonPath = path.join(process.cwd(), 'packages/mobile/app.json');
+    if (!fs.existsSync(appJsonPath)) {
+      throw new Error('Mobile应用配置文件缺失: packages/mobile/app.json');
+    }
+    
+    const easJsonPath = path.join(process.cwd(), 'packages/mobile/eas.json');
+    if (!fs.existsSync(easJsonPath)) {
+      throw new Error('EAS配置文件缺失: packages/mobile/eas.json');
     }
   }
 
   // 检查环境变量
   const requiredEnvVars = [];
-  
-  if (target.includes('vercel')) {
-    requiredEnvVars.push('VERCEL_TOKEN');
-  }
-  
-  if (target.includes('netlify')) {
-    requiredEnvVars.push('NETLIFY_AUTH_TOKEN', 'NETLIFY_SITE_ID');
-  }
   
   if (target.includes('mobile')) {
     requiredEnvVars.push('EXPO_TOKEN');
@@ -143,16 +140,9 @@ async function checkPrerequisites(config) {
   // 检查工具依赖
   const requiredTools = [];
   
-  if (target.includes('vercel')) {
-    requiredTools.push('vercel');
-  }
-  
-  if (target.includes('netlify')) {
-    requiredTools.push('netlify-cli');
-  }
-  
   if (target.includes('mobile')) {
     requiredTools.push('@expo/cli');
+    requiredTools.push('eas-cli');
   }
 
   for (const tool of requiredTools) {

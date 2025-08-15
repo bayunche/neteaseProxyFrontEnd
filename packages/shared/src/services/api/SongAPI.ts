@@ -159,12 +159,13 @@ export class SongAPI {
       );
 
       // NetEase API 响应结构检查
-      if (!response.songs || !Array.isArray(response.songs)) {
+      const responseSongs = (response as any).songs;
+      if (!responseSongs || !Array.isArray(responseSongs)) {
         logger.warn(`未找到歌曲详情: ${idsString}`);
         return [];
       }
 
-      const songs = response.songs.map(this.formatSongDetail);
+      const songs = responseSongs.map(this.formatSongDetail);
       logger.info(`成功获取 ${songs.length} 首歌曲详情`);
       
       return songs;
@@ -280,8 +281,9 @@ export class SongAPI {
       }
 
       // 合并歌词和翻译歌词
-      let lyric = response.data?.lrc?.lyric || '';
-      const tlyric = response.data?.tlyric?.lyric || '';
+      const responseData = (response as any).data;
+      let lyric = responseData?.lrc?.lyric || '';
+      const tlyric = responseData?.tlyric?.lyric || '';
 
       if (tlyric) {
         // 这里可以实现歌词和翻译的合并逻辑

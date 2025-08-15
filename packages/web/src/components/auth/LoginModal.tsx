@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Phone, Key } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Modal from '../common/Modal';

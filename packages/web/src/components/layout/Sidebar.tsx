@@ -14,7 +14,7 @@ import {
   Library,
   Settings
 } from 'lucide-react';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { styled } from '../../styles/stitches.config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SidebarGlassContainer } from '../glass/GlassCard';

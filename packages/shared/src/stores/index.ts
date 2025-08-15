@@ -3,7 +3,7 @@ import { devtools, persist } from 'zustand/middleware';
 import type { Song, Playlist, PlaybackState, UserSettings, Lyrics, PlayStats, PlaybackQueue } from '../types';
 import { PlayMode } from '../types';
 import { audioService } from '../services/audio';
-import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult } from '../services/api';
+import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult, type Album, type Artist } from '../services/api';
 import { statsService } from '../services/StatsService';
 import { StatisticsCollector, type RealTimeStatistics } from '../services/StatisticsCollector';
 
@@ -385,14 +385,24 @@ export const usePlayerStore = create<AppState & AppActions>()(
                 await audioService.playFromQueue(newIndex);
               }
               
-              // 自动加载歌词
-              get().loadLyrics(String(song.id));
+              // 自动加载歌词（延迟调用避免循环引用）
+              setTimeout(() => {
+                const currentStore = get();
+                if (currentStore.loadLyrics) {
+                  currentStore.loadLyrics(String(song.id));
+                }
+              }, 0);
               
               // 记录播放统计
               statsService.onSongChange(song, 'manual');
               
-              // 更新最近播放
-              get().updateRecentPlayed(song);
+              // 更新最近播放（延迟调用避免循环引用）
+              setTimeout(() => {
+                const currentStore = get();
+                if (currentStore.updateRecentPlayed) {
+                  currentStore.updateRecentPlayed(song);
+                }
+              }, 0);
             } else {
               // 没有指定歌曲，使用智能播放逻辑
               await audioService.play();
@@ -400,9 +410,16 @@ export const usePlayerStore = create<AppState & AppActions>()(
               // 获取当前播放的歌曲
               const currentSong = audioService.getCurrentSong();
               if (currentSong) {
-                get().loadLyrics(String(currentSong.id));
+                setTimeout(() => {
+                  const currentStore = get();
+                  if (currentStore.loadLyrics) {
+                    currentStore.loadLyrics(String(currentSong.id));
+                  }
+                  if (currentStore.updateRecentPlayed) {
+                    currentStore.updateRecentPlayed(currentSong);
+                  }
+                }, 0);
                 statsService.onSongChange(currentSong, 'auto');
-                get().updateRecentPlayed(currentSong);
               }
             }
           } catch (error) {
@@ -582,13 +599,18 @@ export const usePlayerStore = create<AppState & AppActions>()(
             await audioService.playFromQueue(0);
             
             // 自动加载歌词
-            get().loadLyrics(String(songs[0].id));
+            setTimeout(() => {
+              const currentStore = get();
+              if (currentStore.loadLyrics) {
+                currentStore.loadLyrics(String(songs[0].id));
+              }
+              if (currentStore.updateRecentPlayed) {
+                currentStore.updateRecentPlayed(songs[0]);
+              }
+            }, 0);
             
             // 记录播放统计
             statsService.onSongChange(songs[0], 'manual');
-            
-            // 更新最近播放
-            get().updateRecentPlayed(songs[0]);
 
             logger.info(`开始播放歌曲列表: ${songs.length}首歌曲`);
           } catch (error) {
@@ -785,7 +807,12 @@ export const usePlayerStore = create<AppState & AppActions>()(
             console.log('登录成功:', loginResult.profile?.nickname);
             
             // 登录成功后自动加载用户数据
-            get().refreshUserData();
+            setTimeout(() => {
+              const currentStore = get();
+              if (currentStore.refreshUserData) {
+                currentStore.refreshUserData();
+              }
+            }, 0);
           } catch (error) {
             console.error('登录失败:', error);
             throw error;
@@ -831,7 +858,12 @@ export const usePlayerStore = create<AppState & AppActions>()(
               }));
               
               // 自动加载用户数据
-              get().refreshUserData();
+              setTimeout(() => {
+                const currentStore = get();
+                if (currentStore.refreshUserData) {
+                  currentStore.refreshUserData();
+                }
+              }, 0);
               return true;
             } else {
               set((state) => ({
@@ -902,9 +934,14 @@ export const usePlayerStore = create<AppState & AppActions>()(
           try {
             // 并行获取用户状态和歌单
             const [userStatus] = await Promise.allSettled([
-              AuthAPI.getUserStatus(),
-              get().loadUserPlaylists()
+              AuthAPI.getUserStatus()
             ]);
+            
+            // 单独加载歌单（避免循环引用）
+            const currentStore = get();
+            if (currentStore.loadUserPlaylists) {
+              await currentStore.loadUserPlaylists();
+            }
 
             // 更新用户详细信息
             if (userStatus.status === 'fulfilled' && userStatus.value.data?.profile) {
@@ -949,9 +986,9 @@ export const usePlayerStore = create<AppState & AppActions>()(
 
               searchResults = {
                 songs: (multiResults[SearchType.SONG] as Song[]) || [],
-                albums: (multiResults[SearchType.ALBUM] as unknown[]) || [],
-                artists: (multiResults[SearchType.ARTIST] as unknown[]) || [],
-                playlists: (multiResults[SearchType.PLAYLIST] as unknown[]) || [],
+                albums: (multiResults[SearchType.ALBUM] as Album[]) || [],
+                artists: (multiResults[SearchType.ARTIST] as Artist[]) || [],
+                playlists: (multiResults[SearchType.PLAYLIST] as Playlist[]) || [],
                 total: (multiResults[SearchType.SONG]?.length || 0) +
                        (multiResults[SearchType.ALBUM]?.length || 0) +
                        (multiResults[SearchType.ARTIST]?.length || 0) +
@@ -1137,7 +1174,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
 
           try {
             logger.info(`开始加载歌词: ${songId}`);
-            const lyrics = await LyricAPI.getLyric({ id: songId });
+            const lyrics = await LyricAPI.getLyric({ id: Number(songId) });
 
             set((state) => ({
               lyrics: {

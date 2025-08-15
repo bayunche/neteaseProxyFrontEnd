@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Music, Heart, Clock, Plus, Grid, List } from 'lucide-react';
-import { usePlayerStore } from '../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { cn } from '../utils/cn';
 import SongList from '../components/music/SongList';
 import PlaylistCard from '../components/playlist/PlaylistCard';
-import type { Song } from '../types';
+import type { Song } from "@music-player/shared/types";
 
 const LibraryPage: React.FC = () => {
   const {

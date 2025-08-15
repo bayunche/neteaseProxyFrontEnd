@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Plus, X, Image as ImageIcon } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { Button, Input, Modal } from '../common';
-import type { Song } from '../../types';
+import type { Song } from "@music-player/shared/types";
 
 interface CreatePlaylistProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Volume2, RotateCcw } from 'lucide-react';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { cn } from '../../utils/cn';
 
 const LyricsArea: React.FC = () => {

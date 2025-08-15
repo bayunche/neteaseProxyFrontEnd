@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Music Player",
-    "slug": "music-player-universal",
+    "name": "跨平台音乐播放器",
+    "slug": "music-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "automatic",
     "scheme": "music-player",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a0a0a"
     },
@@ -18,7 +18,7 @@
     "ios": {
       "buildNumber": "1",
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.musicplayer",
+      "bundleIdentifier": "com.bayunche.musicplayer",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "此应用需要访问麦克风以实现语音搜索功能",
         "NSAppleMusicUsageDescription": "此应用需要访问音乐库以播放本地音乐",
@@ -38,10 +38,10 @@
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0a0a0a"
       },
-      "package": "com.yourcompany.musicplayer",
+      "package": "com.bayunche.musicplayer",
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -51,7 +51,7 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
-      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.yourcompany.musicplayer",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.bayunche.musicplayer",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -67,77 +67,30 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/logo.png",
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Allow Music Player to access your microphone for voice search features."
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Allow Music Player to access your photos for album artwork.",
-          "savePhotosPermission": "Allow Music Player to save images to your photo library.",
-          "isAccessMediaLocationEnabled": true
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#ef4444",
-          "sounds": ["./assets/notification-sound.wav"]
-        }
-      ],
-      [
-        "expo-background-fetch",
-        {
-          "backgroundFetchTaskName": "music-player-background-fetch"
-        }
-      ],
-      [
-        "expo-task-manager",
-        {
-          "backgroundTaskName": "music-player-background-task"
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0"
-          },
-          "ios": {
-            "deploymentTarget": "13.0"
-          }
-        }
-      ]
+      "expo-av",
+      "expo-media-library", 
+      "expo-notifications"
     ],
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "0a4757d8-43c8-4c42-b372-707927e624c9"
       }
     },
     "updates": {
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/your-eas-project-id"
+      "url": "https://u.expo.dev/0a4757d8-43c8-4c42-b372-707927e624c9"
     },
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
     "privacy": "public",
+    "owner": "bayunche",
     "experiments": {
       "typedRoutes": false
     }

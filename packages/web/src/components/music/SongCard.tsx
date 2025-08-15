@@ -1,8 +1,8 @@
 import React from 'react';
 import { Play, Pause, Heart, Plus, MoreHorizontal } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
-import type { Song } from '../../types';
+import { usePlayerStore } from "@music-player/shared/stores";
+import type { Song } from "@music-player/shared/types";
 
 interface SongCardProps {
   song: Song;

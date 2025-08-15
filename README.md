@@ -238,11 +238,12 @@ npm run build
 
 # 构建特定平台
 npm run build:shared
-npm run build:web
 npm run build:mobile
 
-# 分析Web包大小
-npm run build:web:analyze
+# 构建不同环境
+npm run build:mobile:preview    # 预览版本
+npm run build:mobile:android    # Android生产版
+npm run build:mobile:ios        # iOS生产版
 ```
 
 #### 构建选项
@@ -258,65 +259,10 @@ node scripts/build.js mobile:android
 
 # 构建iOS应用
 node scripts/build.js mobile:ios
+
+# 构建预览版本
+node scripts/build.js mobile:preview
 ```
-
-### 🌐 Web平台部署
-
-#### Vercel部署（推荐）
-```bash
-# 安装Vercel CLI
-npm install -g vercel
-
-# 配置环境变量
-vercel env add REACT_APP_API_BASE_URL
-vercel env add REACT_APP_VAPID_PUBLIC_KEY
-
-# 部署生产版本
-npm run deploy:web:vercel
-# 或
-vercel --prod
-
-# 部署预览版本
-npm run deploy:web:preview
-# 或
-vercel
-```
-
-#### Netlify部署
-```bash
-# 安装Netlify CLI
-npm install -g netlify-cli
-
-# 配置环境变量
-netlify env:set REACT_APP_API_BASE_URL your_api_url
-netlify env:set REACT_APP_VAPID_PUBLIC_KEY your_vapid_key
-
-# 部署生产版本
-npm run deploy:web:netlify
-# 或
-netlify deploy --prod --dir packages/web/dist
-
-# 部署预览版本
-netlify deploy --dir packages/web/dist
-```
-
-#### 自托管部署
-```bash
-# 构建生产版本
-npm run build:web
-
-# 产物位置：packages/web/dist/
-# 部署到任何静态文件服务器
-# 如 nginx、Apache、CDN等
-```
-
-#### Web部署检查清单
-- [ ] 环境变量配置正确
-- [ ] Service Worker正常工作
-- [ ] PWA功能测试通过
-- [ ] Lighthouse评分 ≥ 90
-- [ ] 跨浏览器兼容性测试
-- [ ] HTTPS部署（PWA要求）
 
 ### 📱 移动端构建和发布
 
@@ -431,30 +377,23 @@ eas submit --platform android --profile production
 - [ ] 数据安全表单
 - [ ] 目标受众和内容设置
 
-### 🔄 CI/CD自动化部署
+### 🔄 CI/CD自动化构建
 
 #### GitHub Actions配置
 ```yaml
 # 自动触发条件
-- push到main/master分支
+- push到main/master分支（影响mobile/shared包）
 - 包含[release]的提交消息
 - Pull Request（预览构建）
 ```
 
-#### Web自动部署流程
-1. 代码检查（ESLint + TypeScript）
-2. 运行测试
-3. 构建生产版本
-4. 性能测试（Lighthouse）
-5. 部署到Vercel/Netlify
-6. 安全扫描
-
 #### Mobile自动构建流程
-1. 代码检查和测试
-2. EAS开发构建（PR）
-3. EAS预览构建（main分支）
-4. EAS生产构建（release标签）
-5. 自动提交到应用商店
+1. 代码检查和测试（ESLint + TypeScript）
+2. 安全审计（npm audit）
+3. EAS开发构建（PR触发）
+4. EAS预览构建（main分支推送）
+5. EAS生产构建（release标签）
+6. 自动提交到应用商店
 
 ### 📊 部署监控
 
@@ -464,24 +403,24 @@ eas submit --platform android --profile production
 node scripts/deploy.js [target] [options]
 
 # 可用目标
-node scripts/deploy.js web:vercel
-node scripts/deploy.js web:netlify
-node scripts/deploy.js web:preview
-node scripts/deploy.js mobile:eas
-node scripts/deploy.js mobile:submit:android
-node scripts/deploy.js mobile:submit:ios
+node scripts/deploy.js mobile:eas                    # OTA更新
+node scripts/deploy.js mobile:build:android         # 构建Android
+node scripts/deploy.js mobile:build:ios             # 构建iOS
+node scripts/deploy.js mobile:build:preview         # 构建预览版
+node scripts/deploy.js mobile:submit:android        # 提交Google Play
+node scripts/deploy.js mobile:submit:ios            # 提交App Store
 
 # Dry run模式（测试不执行）
-node scripts/deploy.js web:vercel --dry-run
+node scripts/deploy.js mobile:eas --dry-run
 ```
 
 #### 部署状态检查
 ```bash
-# 检查Web部署状态
-curl -f https://your-app.vercel.app/api/health
-
 # 检查移动端构建状态
 eas build:list --limit 10
+
+# 检查OTA更新状态
+eas update:list --branch production
 
 # 查看部署历史
 cat deployment-report.json
@@ -489,60 +428,52 @@ cat deployment-report.json
 
 #### 回滚策略
 ```bash
-# Web平台回滚
-vercel rollback https://your-app.vercel.app
-
 # 移动端回滚（发布新版本或OTA更新）
 eas update --branch production
+
+# 或构建新版本
+eas build --platform all --profile production
 ```
 
 ### 🔐 环境变量配置
 
-#### Web平台环境变量
-```bash
-# 必需变量
-REACT_APP_API_BASE_URL=https://api.example.com
-REACT_APP_VAPID_PUBLIC_KEY=your-vapid-key
-
-# 可选变量
-REACT_APP_ANALYTICS_ID=your-analytics-id
-REACT_APP_SENTRY_DSN=your-sentry-dsn
-```
-
 #### 移动端环境变量
 ```bash
-# EAS Secrets
+# EAS Secrets配置
 API_BASE_URL=https://api.example.com
 EXPO_PUBLIC_API_KEY=your-api-key
 SENTRY_DSN=your-sentry-dsn
+
+# 设置EAS Secret
+eas secret:create --scope project --name API_BASE_URL --value https://api.example.com
+eas secret:create --scope project --name EXPO_PUBLIC_API_KEY --value your-api-key
 ```
 
 #### CI/CD环境变量
 ```bash
-# GitHub Secrets
-VERCEL_TOKEN=your-vercel-token
-VERCEL_ORG_ID=your-org-id
-VERCEL_PROJECT_ID=your-project-id
-NETLIFY_AUTH_TOKEN=your-netlify-token
-NETLIFY_SITE_ID=your-site-id
-EXPO_TOKEN=your-expo-token
+# GitHub Secrets配置
+EXPO_TOKEN=your-expo-token           # Expo构建和发布令牌
+
+# 设置GitHub Secrets
+# 在GitHub仓库 Settings > Secrets and variables > Actions 中添加：
+# - EXPO_TOKEN: 从 https://expo.dev/accounts/[account]/settings/access-tokens 获取
 ```
 
-### 📈 部署性能优化
+### 📈 移动端性能优化
 
-#### Web部署优化
-- 启用CDN缓存
-- Gzip/Brotli压缩
-- 图片优化和懒加载
-- Service Worker缓存策略
-- 预加载关键资源
+#### EAS构建优化
+- 启用Hermes JavaScript引擎（Android）
+- 代码混淆和压缩（生产构建）
+- 资源优化和图片压缩
+- Bundle分割和懒加载
+- 原生依赖优化
 
-#### 移动端优化
-- 启用Hermes JavaScript引擎
-- 代码混淆和压缩
-- 资源优化和压缩
-- OTA更新策略
-- 渐进式发布
+#### OTA更新策略
+- 智能增量更新
+- A/B测试发布
+- 渐进式发布（1% → 10% → 50% → 100%）
+- 自动回滚机制
+- 网络条件检测
 
 ## 📈 性能优化
 

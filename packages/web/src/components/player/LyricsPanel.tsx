@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Music2, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
-import { formatSongDuration } from '../../services/api';
+import { usePlayerStore } from "@music-player/shared/stores";
+import { formatSongDuration } from "@music-player/shared";
 
 interface LyricsPanelProps {
   className?: string;

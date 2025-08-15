@@ -47,7 +47,7 @@ const RecentPage = createLazyComponent(
 
 // 低优先级页面
 const PlaylistDetailPage = createLazyComponent(
-  () => import('../pages/PlaylistDetailPage.enhanced'),
+  () => import('../pages/PlaylistDetailPage'),
   { 
     priority: 'low', 
     chunkName: 'playlist-detail-page',

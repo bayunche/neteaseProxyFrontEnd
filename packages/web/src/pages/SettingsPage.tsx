@@ -12,8 +12,8 @@ import {
   LogOut,
   User
 } from 'lucide-react';
-import { usePlayerStore } from '../stores';
-import { PlayMode } from '../types';
+import { usePlayerStore } from "@music-player/shared/stores";
+import { PlayMode } from "@music-player/shared/types";
 import { cn } from '../utils/cn';
 
 const SettingsPage: React.FC = () => {

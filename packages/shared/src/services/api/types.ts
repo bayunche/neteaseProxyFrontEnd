@@ -135,6 +135,7 @@ export interface SongUrlResponse extends APIResponse {
 
 // 用户和登录相关类型
 export interface User {
+  id: number;
   userId: number;
   nickname: string;
   avatarUrl: string;
@@ -143,6 +144,8 @@ export interface User {
   province?: number;
   city?: number;
   birthday?: number;
+  type?: string;
+  createdAt?: number | Date;
 }
 
 // Playlist API 类型定义
@@ -195,11 +198,11 @@ export interface ApiPlaylistData {
 }
 
 export interface SongDetailResponse extends APIResponse {
-  songs: ApiTrack[];
+  songs?: ApiTrack[];
 }
 
 export interface PlaylistDetailResponse extends APIResponse {
-  playlist: ApiPlaylistData;
+  playlist?: ApiPlaylistData;
 }
 
 // Search API 类型定义
@@ -391,7 +394,7 @@ export interface LyricResponse extends APIResponse {
 
 export interface LyricLine {
   time: number;
-  content: string;
+  text: string;
   translation?: string;
 }
 

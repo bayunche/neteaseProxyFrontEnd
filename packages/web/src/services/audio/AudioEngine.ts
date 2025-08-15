@@ -1,4 +1,4 @@
-import type { Song, PlaybackState } from '../../types';
+import type { Song, PlaybackState } from "@music-player/shared/types";
 
 export interface AudioEngineConfig {
   volume: number;

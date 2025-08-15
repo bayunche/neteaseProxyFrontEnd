@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { SearchAPI } from '../../services/api/SearchAPI';
-import { SongAPI } from '../../services/api/SongAPI';
-import { AuthAPI } from '../../services/api/AuthAPI';
-import { SearchType } from '../../services/api/types';
+import { SearchAPI, SongAPI, AuthAPI, SearchType } from '@music-player/shared';
 import { Button, Input, Loading } from '../common';
 import { LoginPanel } from '../auth/LoginPanel';
 

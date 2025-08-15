@@ -1,9 +1,12 @@
 import type { APIConfig } from './types';
 
-// 环境配置
-const IS_DEVELOPMENT = typeof import.meta !== 'undefined' 
-  ? import.meta.env?.DEV 
-  : process.env.NODE_ENV === 'development';
+// 环境配置 - 兼容多种环境
+const IS_DEVELOPMENT = (() => {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env.NODE_ENV === 'development';
+  }
+  return false;
+})();
 
 const API_BASE_URL = IS_DEVELOPMENT 
   ? '/api'  // 开发环境：使用Vite代理

@@ -65,3 +65,28 @@ audio-proxy/node_modules/
 # Temporary files
 *.tmp
 *.temp
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Build reports
+build-report.json
+deployment-report.json
+
+# Development temporary files
+*.md.backup
+*-backup.*
+
+# Expo (Mobile)
+.expo/
+dist/
+web-build/
+
+# Jest
+__tests__/coverage/
+
+# ESLint cache
+.eslintcache

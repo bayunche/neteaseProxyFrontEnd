@@ -158,7 +158,7 @@ export class NetEaseAPI {
    */
   async get<T = unknown>(
     path: string, 
-    params?: Record<string, unknown>, 
+    params?: Record<string, string | number>, 
     options?: Omit<RequestOptions, 'method' | 'params'>
   ): Promise<APIResponse<T>> {
     return this.request<T>(path, {
@@ -173,7 +173,7 @@ export class NetEaseAPI {
    */
   async post<T = unknown>(
     path: string, 
-    body?: Record<string, unknown>, 
+    body?: Record<string, string | number>, 
     options?: Omit<RequestOptions, 'method' | 'body'>
   ): Promise<APIResponse<T>> {
     return this.request<T>(path, {

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Play, Plus, Heart, MoreHorizontal, Music, User, Disc, ListMusic } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { usePlayerStore } from '../../stores';
-import type { Song } from '../../types';
+import { usePlayerStore } from "@music-player/shared/stores";
+import type { Song } from "@music-player/shared/types";
 
 interface SearchResultsProps {
   className?: string;

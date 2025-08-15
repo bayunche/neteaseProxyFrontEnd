@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { usePlayerStore } from './stores';
+import { usePlayerStore } from '@music-player/shared/stores';
 import WebRouter from './router/WebRouter';
 
 function App() {

@@ -2,63 +2,43 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Play,
-  Pause,
-  Heart,
-  Share2,
-  MoreHorizontal,
-  Clock,
-  User,
-  Calendar,
-  Music2,
   Shuffle,
-  Plus,
   ChevronLeft,
-  ChevronUp,
-  ChevronDown,
-  Loader,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "../utils/cn";
-import { usePlayerStore } from "../stores";
-import { formatSongDuration, formatPlayCount } from "../services/api";
-import { EnhancedPlaylistAPI } from "../services/api";
-import type { Playlist, Song } from "../types";
+import { usePlayerStore } from "@music-player/shared/stores";
+import { formatPlayCount, EnhancedPlaylistAPI } from "@music-player/shared";
+import VirtualizedSongList from "../components/music/VirtualizedSongList";
+import type { Playlist, Song } from "@music-player/shared/types";
 
 interface PlaylistState {
   info: Omit<Playlist, "songs"> | null;
   songs: Song[];
   totalSongs: number;
   hasMoreSongs: boolean;
-  currentPage: number;
+  currentOffset: number;
 }
 
-const PlaylistDetailPage: React.FC = () => {
+const EnhancedPlaylistDetailPage: React.FC = () => {
   const { playlistId } = useParams<{ playlistId: string }>();
   const navigate = useNavigate();
+
+  // 状态管理
   const [playlist, setPlaylist] = useState<PlaylistState>({
     info: null,
     songs: [],
     totalSongs: 0,
     hasMoreSongs: false,
-    currentPage: 0,
+    currentOffset: 0,
   });
+
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState(false);
 
-  const {
-    player,
-    user,
-    play,
-    pause,
-    addToQueue,
-    addToFavorites,
-    removeFromFavorites,
-    playAllSongs,
-  } = usePlayerStore();
-
-  const { currentSong, isPlaying } = player;
-  const { favorites } = user;
+  const { play, playAllSongs } = usePlayerStore();
 
   // 加载歌单基本信息
   const loadPlaylistInfo = useCallback(async () => {
@@ -80,6 +60,8 @@ const PlaylistDetailPage: React.FC = () => {
         ...prev,
         info,
         totalSongs: info.trackCount || 0,
+        // 初始化songs数组，用undefined填充
+        songs: new Array(info.trackCount || 0).fill(undefined),
       }));
     } catch (err) {
       console.error("加载歌单信息失败:", err);
@@ -89,31 +71,41 @@ const PlaylistDetailPage: React.FC = () => {
     }
   }, [playlistId]);
 
-  // 加载歌曲列表
+  // 加载歌曲（分页）
   const loadSongs = useCallback(
-    async (page: number = 0) => {
+    async (offset: number, limit: number) => {
       if (!playlistId) return;
 
       try {
-        if (page === 0) {
-          setLoadingMore(true);
-        }
+        setLoadingMore(true);
 
         const response = await EnhancedPlaylistAPI.loadMoreSongs(
           playlistId,
-          page * 20,
-          20
+          offset,
+          limit
         );
 
-        setPlaylist((prev) => ({
-          ...prev,
-          songs:
-            page === 0 ? response.songs : [...prev.songs, ...response.songs],
-          hasMoreSongs: response.hasMore,
-          currentPage: page,
-        }));
+        setPlaylist((prev) => {
+          const newSongs = [...prev.songs];
+
+          // 填充新数据到对应位置
+          response.songs.forEach((song: Song, index: number) => {
+            newSongs[offset + index] = song;
+          });
+
+          return {
+            ...prev,
+            songs: newSongs,
+            hasMoreSongs: response.hasMore,
+            currentOffset: Math.max(
+              prev.currentOffset,
+              offset + response.songs.length
+            ),
+          };
+        });
       } catch (err) {
         console.error("加载歌曲失败:", err);
+        // 不设置全局错误，避免影响已加载的内容
       } finally {
         setLoadingMore(false);
       }
@@ -121,96 +113,123 @@ const PlaylistDetailPage: React.FC = () => {
     [playlistId]
   );
 
+  // 处理加载更多
+  const handleLoadMore = useCallback(
+    async (startIndex: number) => {
+      const pageSize = 20;
+      const startPage = Math.floor(startIndex / pageSize);
+      const offset = startPage * pageSize;
+
+      // 检查是否已经加载过这个范围
+      const needsLoading = playlist.songs
+        .slice(offset, offset + pageSize)
+        .some((song) => !song);
+
+      if (needsLoading && !loadingMore) {
+        await loadSongs(offset, pageSize);
+      }
+    },
+    [playlist.songs, loadSongs, loadingMore]
+  );
+
   // 初始化加载
   useEffect(() => {
     loadPlaylistInfo();
   }, [loadPlaylistInfo]);
 
-  // 加载第一页歌曲
+  // 加载第一页数据
   useEffect(() => {
-    if (playlist.info && playlist.totalSongs > 0) {
-      loadSongs(0);
+    if (
+      playlist.info &&
+      playlist.totalSongs > 0 &&
+      playlist.songs.length > 0 &&
+      !playlist.songs[0]
+    ) {
+      loadSongs(0, 20); // 加载第一页
     }
-  }, [playlist.info, playlist.totalSongs, loadSongs]);
+  }, [playlist.info, playlist.totalSongs, playlist.songs, loadSongs]);
 
-  // 加载更多歌曲
-  const handleLoadMore = () => {
-    if (playlist.hasMoreSongs && !loadingMore) {
-      loadSongs(playlist.currentPage + 1);
-    }
-  };
+  // 处理播放/暂停 (暂时不使用，留作备用)
+  // const handlePlayPause = useCallback(() => {
+  //   if (!playlist.info || playlist.songs.length === 0) return;
 
-  // 处理播放/暂停
-  const handlePlayPause = () => {
-    if (!playlist.info || playlist.songs.length === 0) return;
+  //   const currentPlaylistSong = playlist.songs.find(
+  //     (song) => song?.id === currentSong?.id
+  //   );
 
-    const currentPlaylistSong = playlist.songs.find(
-      (song) => song.id === currentSong?.id
-    );
-
-    if (currentPlaylistSong && isPlaying) {
-      pause();
-    } else {
-      // 播放第一首歌曲
-      play(playlist.songs[0]);
-    }
-  };
+  //   if (currentPlaylistSong && isPlaying) {
+  //     pause();
+  //   } else {
+  //     // 播放第一首可用歌曲
+  //     const firstSong = playlist.songs.find((song) => song);
+  //     if (firstSong) {
+  //       play(firstSong);
+  //     }
+  //   }
+  // }, [playlist, currentSong, isPlaying, play, pause]);
 
   // 处理歌曲点击
-  const handleSongClick = (song: Song) => {
-    play(song);
-  };
-
-  // 处理添加到收藏
-  const handleToggleFavorite = (song: Song, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const isFavorite = favorites.some((fav) => fav.id === song.id);
-
-    if (isFavorite) {
-      removeFromFavorites(String(song.id));
-    } else {
-      addToFavorites(song);
-    }
-  };
-
-  // 处理添加到队列
-  const handleAddToQueue = (song: Song, e: React.MouseEvent) => {
-    e.stopPropagation();
-    addToQueue(song);
-  };
+  const handleSongClick = useCallback(
+    (song: Song) => {
+      play(song);
+    },
+    [play]
+  );
 
   // 处理播放全部
-  const handlePlayAll = async () => {
+  const handlePlayAll = useCallback(async () => {
     if (!playlist.info || playlist.totalSongs === 0) return;
 
     try {
       setLoadingMore(true);
-      const playlist = await EnhancedPlaylistAPI.getPlaylistDetail({
-        id: playlistId!,
-      });
-      const allSongs = playlist.songs;
-      if (allSongs.length > 0) {
-        await playAllSongs(allSongs);
+
+      // 首先尝试使用已加载的歌曲
+      const loadedSongs = playlist.songs.filter(song => song);
+      
+      if (loadedSongs.length > 0) {
+        // 如果已经有足够的歌曲，直接播放
+        await playAllSongs(loadedSongs);
+      } else {
+        // 否则，获取完整歌单数据
+        const fullPlaylist = await EnhancedPlaylistAPI.getPlaylistDetail({
+          id: playlistId!,
+        });
+        
+        if (fullPlaylist.songs.length > 0) {
+          await playAllSongs(fullPlaylist.songs);
+        }
       }
     } catch (error) {
       console.error("播放全部失败:", error);
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [playlist.info, playlist.totalSongs, playlist.songs, playlistId, playAllSongs]);
 
   // 处理随机播放
-  const handleShufflePlay = async () => {
+  const handleShufflePlay = useCallback(async () => {
     if (!playlist.info || playlist.totalSongs === 0) return;
 
     try {
       setLoadingMore(true);
-      const playlist = await EnhancedPlaylistAPI.getPlaylistDetail({
-        id: playlistId!,
-      });
-      const allSongs = playlist.songs;
-      if (allSongs.length > 0) {
-        const shuffledSongs = [...allSongs].sort(() => Math.random() - 0.5);
+
+      // 首先尝试使用已加载的歌曲
+      const loadedSongs = playlist.songs.filter(song => song);
+      
+      let songsToShuffle;
+      if (loadedSongs.length >= Math.min(50, playlist.totalSongs)) {
+        // 如果已加载的歌曲足够多，直接使用
+        songsToShuffle = loadedSongs;
+      } else {
+        // 否则，获取完整歌单数据
+        const fullPlaylist = await EnhancedPlaylistAPI.getPlaylistDetail({
+          id: playlistId!,
+        });
+        songsToShuffle = fullPlaylist.songs;
+      }
+
+      if (songsToShuffle.length > 0) {
+        const shuffledSongs = [...songsToShuffle].sort(() => Math.random() - 0.5);
         await playAllSongs(shuffledSongs);
       }
     } catch (error) {
@@ -218,368 +237,153 @@ const PlaylistDetailPage: React.FC = () => {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [playlist.info, playlist.totalSongs, playlist.songs, playlistId, playAllSongs]);
 
   // 返回上一页
-  const handleGoBack = () => {
+  const handleGoBack = useCallback(() => {
     navigate(-1);
-  };
+  }, [navigate]);
+
+  // 重试加载
+  const handleRetry = useCallback(() => {
+    loadPlaylistInfo();
+  }, [loadPlaylistInfo]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">加载歌单信息中...</p>
+        </div>
       </div>
     );
   }
 
-  if (error || (!playlist.info && !loading)) {
+  if (error || !playlist.info) {
     return (
       <div className="flex flex-col items-center justify-center h-96">
-        <div className="text-red-500 mb-4">
-          <Music2 className="w-16 h-16 mx-auto mb-2 opacity-50" />
-          <p className="text-lg font-medium">{error || "歌单加载失败"}</p>
+        <div className="text-center mb-6">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            加载失败
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {error || "歌单加载失败，请检查网络连接"}
+          </p>
         </div>
-        <button
-          onClick={handleGoBack}
-          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-        >
-          返回
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleGoBack}
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+          >
+            返回
+          </button>
+          <button
+            onClick={handleRetry}
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>重试</span>
+          </button>
+        </div>
       </div>
     );
   }
 
-  const totalDuration = playlist.songs.reduce(
-    (acc, song) => acc + song.duration,
-    0
-  );
-  const isCurrentPlaylist = playlist.songs.some(
-    (song) => song.id === currentSong?.id
-  );
+  const totalDuration = playlist.songs
+    .filter((song) => song)
+    .reduce((acc, song) => acc + song.duration, 0);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* 返回按钮 */}
-      <button
-        onClick={handleGoBack}
-        className="mb-6 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-      >
-        <ChevronLeft className="w-5 h-5 mr-1" />
-        返回
-      </button>
-
-      {/* 歌单头部信息 */}
-      <div className="flex flex-col lg:flex-row gap-8 mb-8">
-        {/* 歌单封面 */}
-        <div className="flex-shrink-0">
-          <div className="relative group">
-            <img
-              src={playlist.info?.coverUrl}
-              alt={playlist.info?.title}
-              className="w-64 h-64 object-cover rounded-2xl shadow-2xl"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src =
-                  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjggMTkwQzE1NCA5NyAxOTAgMTI4IDE1NCAxMjhDMTU0IDE1NCAxMjggMTkwIDEyOCAxOTBaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo=";
-              }}
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-2xl transition-all duration-300 flex items-center justify-center">
-              <button
-                onClick={handlePlayPause}
-                className={cn(
-                  "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300",
-                  "opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100",
-                  isCurrentPlaylist && isPlaying
-                    ? "bg-white text-primary-500"
-                    : "bg-primary-500 text-white"
-                )}
-              >
-                {isCurrentPlaylist && isPlaying ? (
-                  <Pause className="w-8 h-8" />
-                ) : (
-                  <Play className="w-8 h-8 ml-1" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 歌单信息 */}
-        <div className="flex-1 flex flex-col justify-end">
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-              歌单
-            </p>
-            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
-              {playlist.info?.title}
-            </h1>
-
-            {playlist.info?.description && (
-              <p className="text-gray-600 dark:text-gray-300 mb-4 max-w-2xl leading-relaxed">
-                {playlist.info.description}
-              </p>
-            )}
-
-            {/* 歌单元数据 */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-              <div className="flex items-center">
-                <User className="w-4 h-4 mr-1" />
-                {playlist.info?.creator}
-              </div>
-              <div className="flex items-center">
-                <Music2 className="w-4 h-4 mr-1" />
-                {playlist.totalSongs} 首歌曲
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                {Math.floor(totalDuration / 60000)} 分钟
-              </div>
-              {playlist.info?.playCount && (
-                <div className="flex items-center">
-                  <Play className="w-4 h-4 mr-1" />
-                  {formatPlayCount(playlist.info.playCount)} 播放
-                </div>
-              )}
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                {playlist.info?.createdAt?.toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-
+    <div className="h-screen flex flex-col">
+      {/* 紧凑的头部区域 */}
+      <div className="flex-shrink-0 px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        {/* 返回按钮和基本信息 */}
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={handleGoBack}
+            className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 mr-1" />
+            返回
+          </button>
+          
           {/* 操作按钮 */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={handlePlayAll}
               disabled={playlist.totalSongs === 0 || loadingMore}
               className={cn(
-                "px-8 py-3 rounded-full font-medium transition-all flex items-center",
+                "px-4 py-1.5 rounded-full font-medium transition-all flex items-center text-sm",
                 playlist.totalSongs > 0 && !loadingMore
-                  ? "bg-primary-500 hover:bg-primary-600 text-white transform hover:scale-105"
+                  ? "bg-primary-500 hover:bg-primary-600 text-white"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               )}
             >
-              <Play className="w-5 h-5 mr-2" />
+              <Play className="w-3 h-3 mr-1" />
               {loadingMore ? "加载中..." : "播放全部"}
             </button>
 
             <button
               onClick={handleShufflePlay}
               disabled={playlist.totalSongs === 0 || loadingMore}
-              className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-500 rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-500 rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
             >
-              <Shuffle className="w-5 h-5 mr-2" />
-              随机播放
+              <Shuffle className="w-3 h-3 mr-1" />
+              随机
             </button>
+          </div>
+        </div>
 
-            <button className="p-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-500 rounded-full transition-all">
-              <Heart className="w-5 h-5" />
-            </button>
+        {/* 歌单信息 - 水平布局 */}
+        <div className="flex items-center gap-4">
+          {/* 小封面 */}
+          <div className="flex-shrink-0">
+            <img
+              src={playlist.info.coverUrl}
+              alt={playlist.info.title}
+              className="w-16 h-16 object-cover rounded-lg shadow-md"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src =
+                  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zMiA0OEM0MCAyNCA0OCAzMiA0MCAzMkM0MCA0MCAzMiA0OCAzMiA0OFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg==";
+              }}
+            />
+          </div>
 
-            <button className="p-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-500 rounded-full transition-all">
-              <Share2 className="w-5 h-5" />
-            </button>
-
-            <button className="p-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-500 rounded-full transition-all">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+          {/* 标题和基本信息 */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-1 truncate">
+              {playlist.info.title}
+            </h1>
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span>{playlist.info.creator}</span>
+              <span>{playlist.totalSongs} 首歌曲</span>
+              <span>{Math.floor(totalDuration / 60000)} 分钟</span>
+              {playlist.info.playCount && (
+                <span>{formatPlayCount(playlist.info.playCount)} 播放</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 歌曲列表 */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
-        {/* 列表头部 */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center text-sm font-medium text-gray-500 dark:text-gray-400">
-              <div className="w-8 text-center">#</div>
-              <div className="flex-1 ml-4">歌曲</div>
-              <div className="w-32 text-right">时长</div>
-              <div className="w-16"></div>
-            </div>
-            <button
-              onClick={() => setIsPlaylistCollapsed(!isPlaylistCollapsed)}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors"
-              title={isPlaylistCollapsed ? "展开播放列表" : "收起播放列表"}
-            >
-              {isPlaylistCollapsed ? (
-                <ChevronDown className="w-5 h-5" />
-              ) : (
-                <ChevronUp className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* 歌曲列表 */}
-        <div
-          className={cn(
-            "divide-y divide-gray-100 dark:divide-gray-700 transition-all duration-300 ease-in-out overflow-hidden",
-            isPlaylistCollapsed ? "max-h-0" : "h-96 overflow-y-auto"
-          )}
-          style={{
-            height: isPlaylistCollapsed ? "0px" : "480px",
-            overflowY: "auto",
-          }}
-          onScroll={(e) => {
-            const element = e.target as HTMLElement;
-            const { scrollTop, scrollHeight, clientHeight } = element;
-
-            // 当滚动到接近底部时加载更多
-            if (
-              scrollHeight - scrollTop <= clientHeight + 200 &&
-              playlist.hasMoreSongs &&
-              !loadingMore
-            ) {
-              handleLoadMore();
-            }
-          }}
-        >
-          {playlist.songs.map((song, index) => {
-            const isCurrentSong = currentSong?.id === song.id;
-            const isFavorite = favorites.some((fav) => fav.id === song.id);
-
-            return (
-              <div
-                key={`${song.id}-${index}`}
-                className={cn(
-                  "group flex items-center px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors",
-                  isCurrentSong && "bg-primary-50 dark:bg-primary-900/20"
-                )}
-                onClick={() => handleSongClick(song, index)}
-              >
-                {/* 序号/播放状态 */}
-                <div className="w-8 flex items-center justify-center">
-                  {isCurrentSong ? (
-                    <div className="w-4 h-4 flex items-center justify-center">
-                      {isPlaying ? (
-                        <div className="flex space-x-0.5">
-                          <div className="w-0.5 h-4 bg-primary-500 animate-pulse"></div>
-                          <div
-                            className="w-0.5 h-2 bg-primary-500 animate-pulse"
-                            style={{ animationDelay: "0.1s" }}
-                          ></div>
-                          <div
-                            className="w-0.5 h-3 bg-primary-500 animate-pulse"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                        </div>
-                      ) : (
-                        <Play className="w-3 h-3 text-primary-500" />
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <span
-                        className={cn(
-                          "text-sm text-gray-400 group-hover:hidden",
-                          index < 9 ? "w-4" : "w-6"
-                        )}
-                      >
-                        {index + 1}
-                      </span>
-                      <button className="hidden group-hover:flex w-6 h-6 items-center justify-center bg-gray-200 dark:bg-gray-600 hover:bg-primary-500 hover:text-white rounded-full transition-colors">
-                        <Play className="w-3 h-3 ml-0.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* 歌曲信息 */}
-                <div className="flex-1 ml-4 min-w-0">
-                  <div className="flex items-center">
-                    <img
-                      src={song.coverUrl}
-                      alt={song.title}
-                      className="w-12 h-12 rounded-lg object-cover mr-4"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src =
-                          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzNkMzMCAxOCAzNiAyNCAzMCAyNEMzMCAzMCAyNCAzNiAyNCAzNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg==";
-                      }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className={cn(
-                          "font-medium truncate",
-                          isCurrentSong
-                            ? "text-primary-500"
-                            : "text-gray-900 dark:text-white"
-                        )}
-                      >
-                        {song.title}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {song.artist}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 时长 */}
-                <div className="w-32 text-right">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {formatSongDuration(song.duration)}
-                  </span>
-                </div>
-
-                {/* 操作按钮 */}
-                <div className="w-16 flex items-center justify-end space-x-1">
-                  <button
-                    onClick={(e) => handleToggleFavorite(song, e)}
-                    className={cn(
-                      "p-2 rounded-full transition-all opacity-0 group-hover:opacity-100",
-                      isFavorite
-                        ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        : "text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-600"
-                    )}
-                    title={isFavorite ? "取消收藏" : "收藏"}
-                  >
-                    <Heart
-                      className={cn("w-4 h-4", isFavorite && "fill-current")}
-                    />
-                  </button>
-
-                  <button
-                    onClick={(e) => handleAddToQueue(song, e)}
-                    className="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all opacity-0 group-hover:opacity-100"
-                    title="添加到队列"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* 加载更多指示器 */}
-          {loadingMore && (
-            <div className="flex items-center justify-center py-4">
-              <Loader className="w-5 h-5 animate-spin text-primary-500 mr-2" />
-              <span className="text-gray-500 dark:text-gray-400">
-                加载更多歌曲...
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* 空状态 */}
-        {playlist.songs.length === 0 && !loading && !loadingMore && (
-          <div className="py-16 text-center">
-            <Music2 className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-            <p className="text-lg text-gray-500 dark:text-gray-400 mb-2">
-              这个歌单还没有歌曲
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              添加一些歌曲来开始播放
-            </p>
-          </div>
-        )}
+      {/* 歌曲列表 - 使用剩余的全部空间 */}
+      <div className="flex-1 overflow-hidden">
+        <VirtualizedSongList
+          songs={playlist.songs}
+          totalCount={playlist.totalSongs}
+          hasMore={playlist.hasMoreSongs}
+          onLoadMore={handleLoadMore}
+          onSongClick={handleSongClick}
+          isLoading={loadingMore}
+          height="100%"
+          className="h-full"
+        />
       </div>
     </div>
   );
 };
 
-export default PlaylistDetailPage;
+export default EnhancedPlaylistDetailPage;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Menu, Sun, Moon, User, LogOut } from 'lucide-react';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { styled } from '../../styles/stitches.config';
 import { motion } from 'framer-motion';
 import { GlassContainer } from '../glass/GlassCard';

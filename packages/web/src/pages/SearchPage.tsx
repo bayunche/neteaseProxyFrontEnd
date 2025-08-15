@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
-import { usePlayerStore } from '../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { cn } from '../utils/cn';
 import SearchResults from '../components/search/SearchResults';
 

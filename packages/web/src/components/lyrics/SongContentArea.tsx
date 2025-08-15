@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Heart, MoreHorizontal, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { formatTime } from '../../utils/timeFormat';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 
 interface SongContentAreaProps {
   onScrollDetected: () => void;

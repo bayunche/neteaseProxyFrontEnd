@@ -128,7 +128,8 @@ export const formatPlayCount = (count: number): string => {
 // 检查歌曲是否可播放
 export const isSongPlayable = (song: { audioUrl?: string; id: string | number }): boolean => {
   // fee: 0免费, 1VIP, 4付费, 8非会员可免费播放低音质
-  return song.fee === 0 || song.fee === 8;
+  const fee = (song as any).fee;
+  return fee === 0 || fee === 8;
 };
 
 // Cookie解析工具

@@ -120,7 +120,7 @@ export class SearchAPI {
     offset: number = 0
   ): Promise<Playlist[]> {
     const result = await this.search(keywords, SearchType.PLAYLIST, limit, offset);
-    return result.playlists || [];
+    return (result.playlists || []).map(this.convertApiPlaylistToPlaylist);
   }
 
   /**
@@ -205,25 +205,20 @@ export class SearchAPI {
    * 获取热门搜索关键词
    */
   static async getHotSearchKeywords(): Promise<string[]> {
-    try {
-      // 注意：这个接口需要根据实际API情况调整
-      // 临时返回一些热门关键词
-      return [
-        '周杰伦',
-        '林俊杰',
-        '邓紫棋',
-        '薛之谦',
-        '毛不易',
-        '陈奕迅',
-        '王菲',
-        '李荣浩',
-        '张学友',
-        '刘德华'
-      ];
-    } catch (error) {
-      logger.warn('获取热门搜索失败', error);
-      return [];
-    }
+    // 注意：这个接口需要根据实际API情况调整
+    // 临时返回一些热门关键词
+    return [
+      '周杰伦',
+      '林俊杰',
+      '邓紫棋',
+      '薛之谦',
+      '毛不易',
+      '陈奕迅',
+      '王菲',
+      '李荣浩',
+      '张学友',
+      '刘德华'
+    ];
   }
 
   /**
@@ -264,7 +259,7 @@ export class SearchAPI {
 
       case SearchType.PLAYLIST:
         if (apiResult.playlists) {
-          result.playlists = apiResult.playlists.map((playlist: ApiPlaylistForSearch) => this.formatPlaylist(playlist));
+          result.playlists = apiResult.playlists.map((playlist: ApiPlaylistForSearch) => this.convertApiPlaylistToPlaylist(playlist));
           result.playlistCount = apiResult.playlistCount || 0;
         }
         break;
@@ -467,6 +462,25 @@ export class SearchAPI {
       albums: mockAlbums,
       artists: mockArtists,
       playlists: mockPlaylists
+    };
+  }
+
+  /**
+   * 转换API歌单到标准Playlist格式
+   */
+  private static convertApiPlaylistToPlaylist(apiPlaylist: any): Playlist {
+    return {
+      id: String(apiPlaylist.id || apiPlaylist.playlist_id || Date.now()),
+      title: apiPlaylist.name || apiPlaylist.title || '未知歌单',
+      description: apiPlaylist.description || '',
+      coverUrl: apiPlaylist.coverImgUrl || apiPlaylist.picUrl || '',
+      creator: apiPlaylist.creator?.nickname || apiPlaylist.creator?.name || '未知用户',
+      songs: [],
+      isPublic: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      trackCount: apiPlaylist.trackCount || 0,
+      playCount: apiPlaylist.playCount || 0
     };
   }
 }

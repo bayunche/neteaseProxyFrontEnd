@@ -25,7 +25,8 @@
       "Bash(sed:*)",
       "Bash(awk:*)",
       "Bash(cp:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

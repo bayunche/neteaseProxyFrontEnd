@@ -6,7 +6,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 
 // 导入共享状态管理
-// import { usePlayerStore } from '@music-player/shared';
+import { usePlayerStore } from '@music-player/shared';
+
+// 初始化移动端服务
+import './src/services';
 
 // 导入懒加载工具
 import { 

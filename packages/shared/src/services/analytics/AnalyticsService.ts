@@ -204,7 +204,7 @@ export abstract class AnalyticsService {
       albumName: song.album,
       duration: song.duration,
       playlistId: playlist?.id,
-      playlistName: playlist?.name,
+      playlistName: playlist?.title,
     });
   }
 
@@ -222,7 +222,7 @@ export abstract class AnalyticsService {
    * 设置用户信息
    */
   setUser(user: Partial<User>): void {
-    const userId = this.config.anonymizeData && user.id ? this.hashUserId(user.id) : user.id;
+    const userId = this.config.anonymizeData && user.id ? this.hashUserId(String(user.id)) : user.id;
     
     this.track({
       name: 'user_identify',

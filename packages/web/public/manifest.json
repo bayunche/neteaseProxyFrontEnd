@@ -1,0 +1,92 @@
+{
+  "name": "跨平台音乐播放器",
+  "short_name": "音乐播放器",
+  "description": "现代化跨平台音乐播放器，支持网易云音乐API",
+  "theme_color": "#ef4444",
+  "background_color": "#0a0a0a",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "categories": ["music", "entertainment", "multimedia"],
+  "lang": "zh-CN",
+  "dir": "ltr",
+  
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "搜索音乐",
+      "short_name": "搜索",
+      "description": "快速搜索歌曲、专辑或艺人",
+      "url": "/search",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "我的音乐库",
+      "short_name": "音乐库",
+      "description": "查看收藏的音乐和播放列表",
+      "url": "/library",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "播放统计",
+      "short_name": "统计",
+      "description": "查看音乐播放统计和个人喜好",
+      "url": "/stats",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+
+  "protocol_handlers": [
+    {
+      "protocol": "web+music",
+      "url": "/play?url=%s"
+    }
+  ],
+
+  "file_handlers": [
+    {
+      "action": "/upload",
+      "accept": {
+        "audio/*": [".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"]
+      }
+    }
+  ],
+
+  "prefer_related_applications": false
+}

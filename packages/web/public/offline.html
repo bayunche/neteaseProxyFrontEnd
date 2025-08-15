@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线模式 - 音乐播放器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .offline-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .offline-description {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .offline-features {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .offline-features h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .offline-features ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .offline-features li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            opacity: 0.8;
+        }
+
+        .offline-features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .retry-button {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .retry-button:active {
+            transform: translateY(0);
+        }
+
+        .cache-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .offline-container {
+                margin: 20px;
+                padding: 30px 20px;
+            }
+
+            .offline-title {
+                font-size: 24px;
+            }
+
+            .offline-description {
+                font-size: 14px;
+            }
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .retry-button.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .retry-button.loading .button-text {
+            display: none;
+        }
+
+        .retry-button.loading .loading-spinner {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">🎵</div>
+        <h1 class="offline-title">离线模式</h1>
+        <p class="offline-description">
+            当前网络连接不可用，但您仍然可以享受部分功能。我们已经为您保存了一些内容供离线使用。
+        </p>
+
+        <div class="offline-features">
+            <h3>🎶 离线功能</h3>
+            <ul>
+                <li>播放已缓存的音乐</li>
+                <li>浏览本地音乐库</li>
+                <li>查看收藏的歌单</li>
+                <li>继续未完成的播放列表</li>
+                <li>查看播放历史记录</li>
+            </ul>
+        </div>
+
+        <button class="retry-button" onclick="retryConnection()">
+            <span class="button-text">重新连接</span>
+            <div class="loading-spinner"></div>
+        </button>
+
+        <div class="cache-info">
+            <p>💾 已缓存内容会在网络恢复后自动同步</p>
+        </div>
+    </div>
+
+    <script>
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        async function retryConnection() {
+            const button = document.querySelector('.retry-button');
+            
+            if (retryCount >= maxRetries) {
+                button.textContent = '网络连接失败';
+                button.disabled = true;
+                button.style.background = '#6b7280';
+                return;
+            }
+
+            button.classList.add('loading');
+            retryCount++;
+
+            try {
+                // 尝试获取一个轻量级的资源来测试连接
+                const response = await fetch('/', { 
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+
+                if (response.ok) {
+                    // 连接成功，重定向到主页
+                    button.querySelector('.button-text').textContent = '连接成功！';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    throw new Error('Network response not ok');
+                }
+            } catch (error) {
+                console.error('Connection retry failed:', error);
+                button.classList.remove('loading');
+                
+                if (retryCount < maxRetries) {
+                    button.querySelector('.button-text').textContent = `重试 (${retryCount}/${maxRetries})`;
+                    setTimeout(() => {
+                        retryConnection();
+                    }, 2000);
+                } else {
+                    button.querySelector('.button-text').textContent = '连接失败';
+                    button.disabled = true;
+                    button.style.background = '#6b7280';
+                    button.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        // 监听网络状态变化
+        window.addEventListener('online', () => {
+            // 网络恢复，自动重定向
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        });
+
+        // 页面加载时检查网络状态
+        document.addEventListener('DOMContentLoaded', () => {
+            if (navigator.onLine) {
+                // 如果实际上是在线的，可能是缓存问题，直接重定向
+                window.location.href = '/';
+            }
+
+            // 添加一些用户友好的功能
+            updateCacheInfo();
+        });
+
+        function updateCacheInfo() {
+            // 显示更多有用的离线信息
+            if ('serviceWorker' in navigator && 'caches' in window) {
+                caches.keys().then(cacheNames => {
+                    if (cacheNames.length > 0) {
+                        document.querySelector('.cache-info p').innerHTML = 
+                            `💾 已缓存 ${cacheNames.length} 个数据包，包含音乐和应用资源`;
+                    }
+                });
+            }
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                retryConnection();
+            }
+        });
+    </script>
+</body>
+</html>

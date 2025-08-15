@@ -1,4 +1,4 @@
-import type { Song } from '../types';
+import type { Song } from "@music-player/shared/types";
 import { generateTestSounds, checkAudioSupport } from '../utils/audioGenerator';
 
 // 免费可用的音频文件示例

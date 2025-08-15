@@ -251,6 +251,12 @@ export interface PlayHistory {
   completionRate: number;
 }
 
+export interface PlaybackQueue {
+  songs: Song[];
+  currentIndex: number;
+  mode: PlayMode;
+}
+
 // API and error types
 export interface APIError {
   code: string;
@@ -269,3 +275,6 @@ export interface ComponentProps {
   className?: string;
   children?: React.ReactNode;
 }
+
+// Re-export API types that are commonly used
+export type { User, Album as APIAlbum, Artist as APIArtist } from '../services/api/types';

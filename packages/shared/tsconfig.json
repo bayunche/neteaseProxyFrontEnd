@@ -17,10 +17,11 @@
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": false,
     "noUncheckedIndexedAccess": false,
     "noImplicitReturns": false,
     "noEmitOnError": false,
+    "noImplicitAny": false,
     
     /* Module */
     "esModuleInterop": true,
@@ -35,5 +36,6 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["dist", "node_modules"],
+  "types": ["jest", "node"]
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePlayerStore } from '../../stores';
+import { usePlayerStore } from "@music-player/shared/stores";
 import { styled, darkTheme } from '../../styles/stitches.config';
 import { motion } from 'framer-motion';
 import { GlassContainer } from '../glass/GlassCard';

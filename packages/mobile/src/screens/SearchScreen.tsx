@@ -10,12 +10,19 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { usePlayerStore } from '@music-player/shared';
 import { theme } from '../styles/theme';
 import GlassView from '../components/GlassView';
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const { 
+    search, 
+    performSearch, 
+    clearSearch, 
+    clearSearchHistory,
+    play 
+  } = usePlayerStore();
   
   // 热门搜索
   const hotSearches = [
@@ -23,10 +30,12 @@ export default function SearchScreen() {
     '薛之谦', '林俊杰', '王力宏', '张学友', '刘德华'
   ];
   
-  // 搜索历史
-  const searchHistory = [
-    '告白气球', '光年之外', '消愁', '十年'
-  ];
+  // 执行搜索
+  const handleSearch = async (keyword: string) => {
+    if (!keyword.trim()) return;
+    setSearchText(keyword);
+    await performSearch(keyword);
+  };
   
   return (
     <LinearGradient
@@ -53,8 +62,10 @@ export default function SearchScreen() {
               placeholderTextColor={theme.colors.textTertiary}
               value={searchText}
               onChangeText={setSearchText}
+              onSubmitEditing={() => handleSearch(searchText)}
               autoCapitalize="none"
               autoCorrect={false}
+              returnKeyType="search"
             />
             {searchText.length > 0 && (
               <TouchableOpacity 
@@ -75,11 +86,11 @@ export default function SearchScreen() {
           // 搜索建议页面
           <View style={styles.content}>
             {/* 搜索历史 */}
-            {searchHistory.length > 0 && (
+            {search.history.length > 0 && (
               <GlassView style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>搜索历史</Text>
-                  <TouchableOpacity>
+                  <TouchableOpacity onPress={clearSearchHistory}>
                     <Ionicons 
                       name="trash-outline" 
                       size={20} 
@@ -88,11 +99,11 @@ export default function SearchScreen() {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.tagContainer}>
-                  {searchHistory.map((item, index) => (
+                  {search.history.map((item, index) => (
                     <TouchableOpacity 
                       key={index}
                       style={styles.tag}
-                      onPress={() => setSearchText(item)}
+                      onPress={() => handleSearch(item)}
                     >
                       <Text style={styles.tagText}>{item}</Text>
                     </TouchableOpacity>
@@ -109,7 +120,7 @@ export default function SearchScreen() {
                   <TouchableOpacity 
                     key={index}
                     style={[styles.tag, index < 3 && styles.hotTag]}
-                    onPress={() => setSearchText(item)}
+                    onPress={() => handleSearch(item)}
                   >
                     {index < 3 && (
                       <View style={styles.hotBadge}>
@@ -127,10 +138,49 @@ export default function SearchScreen() {
         ) : (
           // 搜索结果页面
           <View style={styles.content}>
-            <Text style={styles.resultsText}>
-              搜索 "{searchText}" 的结果
-            </Text>
-            {/* TODO: 实际的搜索结果列表 */}
+            {search.isSearching ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>搜索中...</Text>
+              </View>
+            ) : search.results ? (
+              <View>
+                <Text style={styles.resultsText}>
+                  搜索 "{searchText}" 的结果 ({search.results.total || 0})
+                </Text>
+                {search.results.songs && search.results.songs.length > 0 && (
+                  <GlassView style={styles.section}>
+                    <Text style={styles.sectionTitle}>歌曲</Text>
+                    <FlatList
+                      data={search.results.songs}
+                      keyExtractor={(item) => String(item.id)}
+                      renderItem={({ item: song }) => (
+                        <TouchableOpacity 
+                          style={styles.songItem}
+                          onPress={() => play(song)}
+                        >
+                          <View style={styles.songInfo}>
+                            <Text style={styles.songName} numberOfLines={1}>
+                              {song.name}
+                            </Text>
+                            <Text style={styles.artistName} numberOfLines={1}>
+                              {song.artists?.map(artist => artist.name).join(', ') || '未知艺术家'}
+                            </Text>
+                          </View>
+                          <TouchableOpacity style={styles.playButton}>
+                            <Ionicons name="play" size={20} color={theme.colors.text} />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      )}
+                      scrollEnabled={false}
+                    />
+                  </GlassView>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.resultsText}>
+                暂无搜索结果
+              </Text>
+            )}
           </View>
         )}
       </SafeAreaView>
@@ -240,5 +290,42 @@ const styles = StyleSheet.create({
     ...theme.typography.body1,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.lg,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: theme.spacing.xxl,
+  },
+  loadingText: {
+    ...theme.typography.body1,
+    color: theme.colors.textSecondary,
+  },
+  songItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  songInfo: {
+    flex: 1,
+  },
+  songName: {
+    ...theme.typography.body1,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  artistName: {
+    ...theme.typography.body2,
+    color: theme.colors.textSecondary,
+  },
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
