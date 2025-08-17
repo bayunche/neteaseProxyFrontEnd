@@ -1,42 +1,81 @@
 {
   "cli": {
-    "version": ">= 5.2.0"
+    "version": ">= 5.2.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "NODE_ENV": "development",
+        "EXPO_PUBLIC_API_URL": "http://localhost:3001",
+        "EXPO_PUBLIC_ENVIRONMENT": "development"
+      },
+      "prebuildCommand": "npm run prebuild:shared",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       },
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "buildConfiguration": "Debug"
+      },
+      "cache": {
+        "disabled": true
       }
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "NODE_ENV": "staging",
+        "EXPO_PUBLIC_API_URL": "http://8.134.196.44:3001",
+        "EXPO_PUBLIC_ENVIRONMENT": "preview"
+      },
+      "prebuildCommand": "npm run prebuild:shared",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "buildConfiguration": "Release"
       }
     },
     "production": {
+      "channel": "production",
+      "env": {
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "http://8.134.196.44:3001",
+        "EXPO_PUBLIC_ENVIRONMENT": "production"
+      },
+      "prebuildCommand": "npm run prebuild:shared",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
-        "autoIncrement": "buildNumber"
+        "autoIncrement": "buildNumber",
+        "buildConfiguration": "Release"
       }
     }
   },
   "submit": {
     "production": {
       "android": {
-        "track": "production"
+        "track": "production",
+        "releaseStatus": "draft"
       },
-      "ios": {}
+      "ios": {
+        "ascAppId": "your-app-store-connect-app-id"
+      }
+    },
+    "preview": {
+      "android": {
+        "track": "internal"
+      }
     }
   }
 }

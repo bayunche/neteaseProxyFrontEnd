@@ -126,7 +126,7 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({ className }) => {
       {/* 歌词内容 */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 scrollbar-custom"
       >
         {currentLyrics.lines.map((line, index) => {
           const isCurrentLine = index === currentLineIndex;

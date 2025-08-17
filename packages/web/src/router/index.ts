@@ -45,6 +45,17 @@ const RecentPage = createLazyComponent(
   }
 );
 
+// 登录页面 - 高优先级
+const LoginPage = createLazyComponent(
+  () => import('../pages/Login'),
+  { 
+    preload: true,
+    priority: 'high', 
+    chunkName: 'login-page',
+    retryCount: 3 
+  }
+);
+
 // 低优先级页面
 const PlaylistDetailPage = createLazyComponent(
   () => import('../pages/PlaylistDetailPage'),
@@ -91,6 +102,7 @@ routePreloader.registerRoute('/playlist', PlaylistDetailPage.preload);
 routePreloader.registerRoute('/lyrics', LyricsPage.preload);
 routePreloader.registerRoute('/stats', StatsPage.preload);
 routePreloader.registerRoute('/settings', SettingsPage.preload);
+routePreloader.registerRoute('/login', LoginPage.preload);
 
 // 路由配置类型
 export interface RouteConfig {
@@ -106,6 +118,13 @@ export interface RouteConfig {
 
 // 统一的路由配置 - 适用于 Web 和 Mobile
 export const routes: RouteConfig[] = [
+  {
+    path: '/login',
+    component: LoginPage,
+    title: '登录',
+    showInNavigation: false,
+    requireAuth: false
+  },
   {
     path: '/',
     component: HomePage,

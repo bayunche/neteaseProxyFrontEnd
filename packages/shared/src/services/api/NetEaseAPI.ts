@@ -59,6 +59,15 @@ export class NetEaseAPI {
       ? buildURL(this.baseURL, path, options.params)
       : `${this.baseURL}${path}`;
 
+    // 调试信息
+    console.log(`API请求调试 [${requestId}]:`, {
+      baseURL: this.baseURL,
+      path,
+      finalURL: url,
+      method,
+      params: options.params
+    });
+
     // 构建请求配置 - 适配跨域API请求
     const requestConfig: RequestInit = {
       method,

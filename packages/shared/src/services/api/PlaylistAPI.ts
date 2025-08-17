@@ -18,6 +18,22 @@ import type { Song, Album, Artist, Playlist } from '../../types';
  * 提供歌单相关功能
  */
 export class PlaylistAPI {
+  // 歌单详情缓存
+  private static playlistCache = new Map<string, {
+    data: Playlist;
+    timestamp: number;
+    songsLoaded: boolean; // 标记是否已加载完整歌曲列表
+  }>();
+  
+  // 歌曲详情缓存（用于批量获取的歌曲）
+  private static songCache = new Map<number, {
+    data: Song;
+    timestamp: number;
+  }>();
+  
+  private static CACHE_DURATION = 30 * 60 * 1000; // 30分钟缓存
+  private static MAX_CACHE_SIZE = 50; // 最多缓存50个歌单
+  private static MAX_SONG_CACHE_SIZE = 5000; // 最多缓存5000首歌曲
   /**
    * 获取歌单详情
    * 说明: 1000首以下有歌曲详情,1000首以上须调用/api/song/detail
@@ -32,6 +48,22 @@ export class PlaylistAPI {
         APIErrorType.VALIDATION_ERROR,
         '歌单ID不能为空'
       );
+    }
+
+    // 检查缓存
+    const cacheKey = String(id);
+    const cached = this.playlistCache.get(cacheKey);
+    if (cached) {
+      const now = Date.now();
+      const age = now - cached.timestamp;
+      
+      if (age < this.CACHE_DURATION) {
+        logger.info(`使用缓存的歌单详情 [${id}] (缓存年龄: ${Math.round(age / 1000)}秒)`);
+        return cached.data;
+      } else {
+        // 缓存过期，删除
+        this.playlistCache.delete(cacheKey);
+      }
     }
 
     logger.info(`获取歌单详情: id=${id}, s=${s}`);
@@ -85,6 +117,10 @@ export class PlaylistAPI {
         };
 
         logger.info(`获取歌单详情成功: "${playlist.title}", ${playlist.songs.length}首歌曲`);
+        
+        // 保存到缓存
+        this.saveToCache(cacheKey, playlist, songs.length > 0);
+        
         return playlist;
       } else {
         throw new APIError(
@@ -115,38 +151,58 @@ export class PlaylistAPI {
       return [];
     }
 
-    logger.info(`获取歌曲详情: ${ids.length}首`);
+    // 从缓存获取已有的歌曲
+    const cachedSongs = this.getSongsFromCache(ids);
+    const cachedIds = new Set(cachedSongs.map(song => Number(song.id)));
+    const missingIds = ids.filter(id => !cachedIds.has(id));
 
-    try {
-      const response = await neteaseAPI.get<SongDetailResponse>(
-        API_ENDPOINTS.SONG_DETAIL,
-        {
-          ids: ids.join(',')
+    let allSongs = [...cachedSongs];
+
+    // 只请求缺失的歌曲
+    if (missingIds.length > 0) {
+      logger.info(`获取歌曲详情: ${missingIds.length}首 (${cachedSongs.length}首来自缓存)`);
+
+      try {
+        const response = await neteaseAPI.get<SongDetailResponse>(
+          API_ENDPOINTS.SONG_DETAIL,
+          {
+            ids: missingIds.join(',')
+          }
+        );
+
+        if (response.code === 200 && (response as any).songs) {
+          const newSongs = ((response as any).songs || []).map((song: ApiTrack) => this.formatSong(song));
+          
+          // 缓存新获取的歌曲
+          this.cacheSongs(newSongs);
+          
+          allSongs.push(...newSongs);
+          logger.info(`获取歌曲详情成功: ${newSongs.length}首新歌曲`);
+        } else {
+          throw new APIError(
+            APIErrorType.SERVER_ERROR,
+            response.message || '获取歌曲详情失败'
+          );
         }
-      );
+      } catch (error) {
+        logger.error('获取歌曲详情失败', error);
 
-      if (response.code === 200 && response.songs) {
-        const songs = ((response as any).songs || []).map((song: ApiTrack) => this.formatSong(song));
-        logger.info(`获取歌曲详情成功: ${songs.length}首`);
-        return songs;
-      } else {
+        if (error instanceof APIError) {
+          throw error;
+        }
+
         throw new APIError(
-          APIErrorType.SERVER_ERROR,
-          response.message || '获取歌曲详情失败'
+          APIErrorType.NETWORK_ERROR,
+          '获取歌曲详情网络错误'
         );
       }
-    } catch (error) {
-      logger.error('获取歌曲详情失败', error);
-
-      if (error instanceof APIError) {
-        throw error;
-      }
-
-      throw new APIError(
-        APIErrorType.NETWORK_ERROR,
-        '获取歌曲详情网络错误'
-      );
+    } else {
+      logger.info(`所有 ${ids.length} 首歌曲都来自缓存`);
     }
+
+    // 按原始ids顺序返回歌曲
+    const songMap = new Map(allSongs.map(song => [Number(song.id), song]));
+    return ids.map(id => songMap.get(id)).filter(Boolean) as Song[];
   }
 
   /**
@@ -156,12 +212,12 @@ export class PlaylistAPI {
     const artists = rawSong.artists?.map((artist: ApiArtist) => ({
       id: artist.id,
       name: artist.name,
-      picUrl: artist.picUrl || artist.img1v1Url,
+      picUrl: this.formatImageUrl(artist.picUrl || artist.img1v1Url || ''),
       alias: artist.alias || []
     })) || rawSong.ar?.map((artist: ApiArtist) => ({
       id: artist.id,
       name: artist.name,
-      picUrl: artist.picUrl || artist.img1v1Url,
+      picUrl: this.formatImageUrl(artist.picUrl || artist.img1v1Url || ''),
       alias: artist.alias || []
     })) || [];
 
@@ -250,5 +306,154 @@ export class PlaylistAPI {
   private static formatImageUrl(imageUrl: string): string {
     if (!imageUrl) return imageUrl;
     return getImageProxyUrl(imageUrl);
+  }
+
+  /**
+   * 保存歌单到缓存
+   */
+  private static saveToCache(key: string, playlist: Playlist, songsLoaded: boolean): void {
+    // 检查缓存大小，如果超过限制，删除最老的缓存
+    if (this.playlistCache.size >= this.MAX_CACHE_SIZE) {
+      const oldestKey = this.findOldestCacheKey();
+      if (oldestKey) {
+        this.playlistCache.delete(oldestKey);
+        logger.info(`缓存已满，删除最老的歌单缓存 [${oldestKey}]`);
+      }
+    }
+
+    this.playlistCache.set(key, {
+      data: playlist,
+      timestamp: Date.now(),
+      songsLoaded
+    });
+
+    // 缓存歌曲数据
+    if (songsLoaded && playlist.songs) {
+      this.cacheSongs(playlist.songs);
+    }
+
+    logger.info(`已缓存歌单 [${key}]: ${playlist.title}, ${playlist.songs.length}首歌曲`);
+  }
+
+  /**
+   * 缓存歌曲列表
+   */
+  private static cacheSongs(songs: Song[]): void {
+    // 清理过期的歌曲缓存
+    this.cleanExpiredSongCache();
+
+    const now = Date.now();
+    let cachedCount = 0;
+
+    for (const song of songs) {
+      // 检查歌曲缓存大小
+      if (this.songCache.size >= this.MAX_SONG_CACHE_SIZE) {
+        break; // 达到缓存上限，停止缓存
+      }
+
+      const songId = Number(song.id);
+      if (!this.songCache.has(songId)) {
+        this.songCache.set(songId, {
+          data: song,
+          timestamp: now
+        });
+        cachedCount++;
+      }
+    }
+
+    if (cachedCount > 0) {
+      logger.info(`缓存了 ${cachedCount} 首新歌曲，当前歌曲缓存总数: ${this.songCache.size}`);
+    }
+  }
+
+  /**
+   * 从歌曲缓存获取歌曲
+   */
+  private static getSongsFromCache(songIds: number[]): Song[] {
+    const now = Date.now();
+    const cachedSongs: Song[] = [];
+    const missingIds: number[] = [];
+
+    for (const id of songIds) {
+      const cached = this.songCache.get(id);
+      if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
+        cachedSongs.push(cached.data);
+      } else {
+        missingIds.push(id);
+        if (cached) {
+          this.songCache.delete(id); // 删除过期缓存
+        }
+      }
+    }
+
+    if (cachedSongs.length > 0) {
+      logger.info(`从缓存获取了 ${cachedSongs.length} 首歌曲，还需获取 ${missingIds.length} 首`);
+    }
+
+    return cachedSongs;
+  }
+
+  /**
+   * 清理过期的歌曲缓存
+   */
+  private static cleanExpiredSongCache(): void {
+    const now = Date.now();
+    let deletedCount = 0;
+
+    for (const [id, cached] of this.songCache.entries()) {
+      if (now - cached.timestamp > this.CACHE_DURATION) {
+        this.songCache.delete(id);
+        deletedCount++;
+      }
+    }
+
+    if (deletedCount > 0) {
+      logger.info(`清理了 ${deletedCount} 个过期的歌曲缓存`);
+    }
+  }
+
+  /**
+   * 找到最老的缓存键
+   */
+  private static findOldestCacheKey(): string | null {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+
+    for (const [key, value] of this.playlistCache.entries()) {
+      if (value.timestamp < oldestTime) {
+        oldestTime = value.timestamp;
+        oldestKey = key;
+      }
+    }
+
+    return oldestKey;
+  }
+
+  /**
+   * 清除所有缓存
+   */
+  static clearAllCache(): void {
+    const playlistCount = this.playlistCache.size;
+    const songCount = this.songCache.size;
+    
+    this.playlistCache.clear();
+    this.songCache.clear();
+    
+    logger.info(`已清除所有缓存: ${playlistCount} 个歌单, ${songCount} 首歌曲`);
+  }
+
+  /**
+   * 获取缓存统计信息
+   */
+  static getCacheStats(): {
+    playlistCount: number;
+    songCount: number;
+    totalSize: number;
+  } {
+    return {
+      playlistCount: this.playlistCache.size,
+      songCount: this.songCache.size,
+      totalSize: this.playlistCache.size + this.songCache.size
+    };
   }
 }

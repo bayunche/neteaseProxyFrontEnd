@@ -11,8 +11,8 @@ app.use(cors({
   credentials: true
 }));
 
-// 音频代理中间件
-const audioProxy = createProxyMiddleware({
+// 通用代理中间件函数
+const createGenericProxy = (type = 'audio') => createProxyMiddleware({
   target: 'http://placeholder.com', // 占位符，会被动态替换
   changeOrigin: true,
   secure: false,
@@ -48,9 +48,14 @@ const audioProxy = createProxyMiddleware({
     // 设置必要的请求头
     proxyReq.setHeader('Referer', 'https://music.163.com/');
     proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    proxyReq.setHeader('Accept', 'audio/mpeg,audio/*,*/*');
     
-    console.log(`代理请求: ${req.query.url}`);
+    if (type === 'audio') {
+      proxyReq.setHeader('Accept', 'audio/mpeg,audio/*,*/*');
+    } else if (type === 'image') {
+      proxyReq.setHeader('Accept', 'image/webp,image/apng,image/*,*/*;q=0.8');
+    }
+    
+    console.log(`${type}代理请求: ${req.query.url}`);
   },
   onProxyRes: (proxyRes, req, res) => {
     // 设置CORS头
@@ -59,20 +64,27 @@ const audioProxy = createProxyMiddleware({
     proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
     proxyRes.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization';
     
-    console.log(`代理响应: ${proxyRes.statusCode} - ${req.query.url}`);
+    console.log(`${type}代理响应: ${proxyRes.statusCode} - ${req.query.url}`);
   },
   onError: (err, req, res) => {
-    console.error('代理错误:', err.message);
+    console.error(`${type}代理错误:`, err.message);
     res.status(500).json({ 
-      error: '代理服务器错误', 
+      error: `${type}代理服务器错误`, 
       message: err.message,
       url: req.query.url 
     });
   }
 });
 
+// 创建音频和图片代理实例
+const audioProxy = createGenericProxy('audio');
+const imageProxy = createGenericProxy('image');
+
 // 音频代理路由
 app.use('/audio-proxy', audioProxy);
+
+// 图片代理路由
+app.use('/image-proxy', imageProxy);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
@@ -85,9 +97,10 @@ app.get('/health', (req, res) => {
 
 // 启动服务器
 app.listen(PORT, () => {
-  console.log(`🎵 音频代理服务器启动成功!`);
+  console.log(`🎵 音频/图片代理服务器启动成功!`);
   console.log(`📡 服务地址: http://localhost:${PORT}`);
-  console.log(`🔗 代理端点: http://localhost:${PORT}/audio-proxy?url=<音频URL>`);
+  console.log(`🔗 音频代理端点: http://localhost:${PORT}/audio-proxy?url=<音频URL>`);
+  console.log(`🖼️  图片代理端点: http://localhost:${PORT}/image-proxy?url=<图片URL>`);
   console.log(`💚 健康检查: http://localhost:${PORT}/health`);
 });
 

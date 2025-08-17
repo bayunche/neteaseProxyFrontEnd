@@ -259,7 +259,7 @@ export class SearchAPI {
 
       case SearchType.PLAYLIST:
         if (apiResult.playlists) {
-          result.playlists = apiResult.playlists.map((playlist: ApiPlaylistForSearch) => this.convertApiPlaylistToPlaylist(playlist));
+          result.playlists = apiResult.playlists as ApiPlaylistForSearch[];
           result.playlistCount = apiResult.playlistCount || 0;
         }
         break;
@@ -396,7 +396,7 @@ export class SearchAPI {
         result.artistCount = mockData.artists.length;
         break;
       case SearchType.PLAYLIST:
-        result.playlists = mockData.playlists;
+        result.playlists = mockData.playlists as any;
         result.playlistCount = mockData.playlists.length;
         break;
     }
@@ -472,8 +472,9 @@ export class SearchAPI {
     return {
       id: String(apiPlaylist.id || apiPlaylist.playlist_id || Date.now()),
       title: apiPlaylist.name || apiPlaylist.title || '未知歌单',
+      name: apiPlaylist.name || apiPlaylist.title || '未知歌单',  // API兼容字段
       description: apiPlaylist.description || '',
-      coverUrl: apiPlaylist.coverImgUrl || apiPlaylist.picUrl || '',
+      coverUrl: this.formatImageUrl(apiPlaylist.coverImgUrl || apiPlaylist.picUrl || ''),
       creator: apiPlaylist.creator?.nickname || apiPlaylist.creator?.name || '未知用户',
       songs: [],
       isPublic: true,

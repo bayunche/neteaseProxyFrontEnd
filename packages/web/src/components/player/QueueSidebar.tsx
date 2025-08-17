@@ -147,7 +147,7 @@ const QueueSidebar: React.FC<QueueSidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* 队列列表 */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto scrollbar-custom">
           {songs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">

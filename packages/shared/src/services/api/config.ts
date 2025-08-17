@@ -2,15 +2,40 @@ import type { APIConfig } from './types';
 
 // 环境配置 - 兼容多种环境
 const IS_DEVELOPMENT = (() => {
+  // 检查是否在 localhost 或开发端口
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || 
+           port === '5173' || port === '5174' || port === '3000' ||
+           hostname.includes('localhost');
+  }
+  // Node环境
   if (typeof process !== 'undefined' && process.env) {
     return process.env.NODE_ENV === 'development';
   }
   return false;
 })();
 
-const API_BASE_URL = IS_DEVELOPMENT 
-  ? '/api'  // 开发环境：使用Vite代理
-  : 'http://8.134.196.44:8210'; // 生产环境：直接访问API服务器
+// 强制使用开发环境配置进行调试
+const API_BASE_URL = '/api';  // 强制使用开发环境配置
+
+// 原配置（调试完成后恢复）：
+// const API_BASE_URL = IS_DEVELOPMENT 
+//   ? '/api'  // 开发环境：使用Vite代理
+//   : 'http://8.134.196.44:8210/api'; // 生产环境：直接访问API服务器
+
+// 调试信息
+console.log('API配置调试信息:', {
+  IS_DEVELOPMENT,
+  API_BASE_URL,
+  window_location: typeof window !== 'undefined' ? {
+    hostname: window.location.hostname,
+    port: window.location.port,
+    href: window.location.href
+  } : 'N/A',
+  process_env: typeof process !== 'undefined' ? process.env.NODE_ENV : 'N/A'
+});
 
 // NetEase Music API 配置
 export const API_CONFIG: APIConfig = {
@@ -52,7 +77,8 @@ export const API_ENDPOINTS = {
   SONG_LYRIC: '/song/lyric',
   
   // 用户和认证相关
-  LOGIN_CELLPHONE: '/login/cellphone',
+  CAPTCHA_SENT: '/user/sent',  // 根据API文档修正
+  LOGIN_CELLPHONE: '/user/cellphone',  // 修正为正确的验证码登录端点
   LOGIN_EMAIL: '/login',
   LOGOUT: '/logout',
   LOGIN_STATUS: '/login/status',

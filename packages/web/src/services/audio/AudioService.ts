@@ -2,7 +2,7 @@ import { AudioEngine } from './AudioEngine';
 import type { AudioEngineConfig, AudioEngineEvents } from './AudioEngine';
 import { AudioEventManager } from './AudioEventManager';
 import type { Song, PlayMode, PlaybackState } from "@music-player/shared/types";
-import { SongAPI } from '../api';
+import { SongAPI } from '@music-player/shared';
 
 export interface AudioServiceConfig extends AudioEngineConfig {
   enablePreload: boolean;

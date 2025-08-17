@@ -26,7 +26,11 @@
       "Bash(awk:*)",
       "Bash(cp:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm cache clean:*)",
+      "WebFetch(domain:kevin0z0.github.io)",
+      "Bash(eas:*)",
+      "Bash(npx expo config:*)"
     ],
     "deny": []
   }

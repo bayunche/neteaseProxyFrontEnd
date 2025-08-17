@@ -1,0 +1,52 @@
+/* 全局滚动条样式 */
+.scrollbar-custom {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}
+
+.scrollbar-custom::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 深色主题滚动条 */
+.dark .scrollbar-custom {
+  scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.8);
+}
+
+/* 歌词滚动特殊样式 */
+.lyrics-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.lyrics-scroll::-webkit-scrollbar {
+  display: none;
+}

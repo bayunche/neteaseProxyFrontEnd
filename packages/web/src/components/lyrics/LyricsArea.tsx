@@ -69,63 +69,34 @@ const LyricsArea: React.FC = () => {
     };
   }, []);
 
-  // 自动滚动到当前歌词 - 修复版本
+  // 简化的自动滚动逻辑
   useEffect(() => {
-    // 用户手动滚动时跳过自动滚动
-    if (userScrolling) return;
+    if (userScrolling || !lyricsContainerRef.current || currentLineIndex < 0) return;
     
     const container = lyricsContainerRef.current;
+    const activeLine = lyricRefs.current[currentLineIndex];
     
-    // 基础条件检查
-    if (!container || !currentLyrics?.lines?.length || currentLineIndex < 0 || currentLineIndex >= currentLyrics.lines.length) {
-      return;
-    }
+    if (!activeLine) return;
 
-    const performScroll = () => {
-      const activeLine = lyricRefs.current[currentLineIndex];
+    const scrollToActiveLine = () => {
+      isAutoScrolling.current = true;
       
-      // 等待DOM元素准备就绪
-      if (!activeLine) {
-        // 延迟重试，确保元素已渲染
-        const retryTimer = setTimeout(performScroll, 150);
-        return () => clearTimeout(retryTimer);
-      }
-
-      // 简化的滚动计算，避免使用getBoundingClientRect
       const containerHeight = container.clientHeight;
-      const lineOffsetTop = activeLine.offsetTop;
-      const lineHeight = activeLine.offsetHeight;
+      const targetScrollTop = activeLine.offsetTop - containerHeight / 2;
       
-      // 计算目标滚动位置：歌词行居中
-      const targetScrollTop = lineOffsetTop - containerHeight / 2 + lineHeight / 2;
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
       
-      const currentScrollTop = container.scrollTop;
-      const scrollDifference = Math.abs(targetScrollTop - currentScrollTop);
-      
-      
-      // 使用更大的阈值，避免频繁滚动
-      if (scrollDifference > 50) {
-        isAutoScrolling.current = true;
-        
-        container.scrollTo({
-          top: targetScrollTop,
-          behavior: 'smooth'
-        });
-        
-        // 重置自动滚动标志
-        setTimeout(() => {
-          isAutoScrolling.current = false;
-        }, 1000);
-      }
+      setTimeout(() => {
+        isAutoScrolling.current = false;
+      }, 800);
     };
 
-    // 给DOM一点时间完成渲染
-    const scrollTimer = setTimeout(performScroll, 200);
-    
-    return () => {
-      clearTimeout(scrollTimer);
-    };
-  }, [currentLineIndex, userScrolling, currentLyrics]);
+    const timer = setTimeout(scrollToActiveLine, 100);
+    return () => clearTimeout(timer);
+  }, [currentLineIndex, userScrolling]);
 
   const handleScrollToCurrentLine = () => {
     setUserScrolling(false);
@@ -170,7 +141,7 @@ const LyricsArea: React.FC = () => {
       <div className="h-screen overflow-hidden">
         <div 
           ref={lyricsContainerRef}
-          className="h-full overflow-y-auto p-6"
+          className="h-full overflow-y-auto p-6 lyrics-scroll"
           style={{
             scrollBehavior: 'smooth',
             WebkitOverflowScrolling: 'touch'

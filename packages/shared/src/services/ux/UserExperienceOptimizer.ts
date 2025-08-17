@@ -469,9 +469,9 @@ export class UserExperienceOptimizer {
       // 发送优化应用事件
       this.dispatchOptimizationEvent('apply', suggestion);
       
-      // 标记建议为已应用
-      suggestion.implementation.applied = true;
-      suggestion.implementation.appliedAt = Date.now();
+      // 标记建议为已应用（扩展implementation对象）
+      (suggestion.implementation as any).applied = true;
+      (suggestion.implementation as any).appliedAt = Date.now();
       
       console.log(`Applied optimization: ${suggestion.title}`);
       return true;

@@ -267,7 +267,7 @@ export class AudioPreloader {
       const abortController = new AbortController();
       const preloadItem: PreloadItem = {
         song,
-        url: song.url || '',
+        url: song.audioUrl || '',
         status: PreloadStatus.LOADING,
         priority,
         timestamp: Date.now(),
@@ -279,7 +279,7 @@ export class AudioPreloader {
       console.log(`Starting preload for ${song.title} (${reason}, priority: ${priority})`);
       
       // 开始预加载
-      const audioData = await this.fetchAudioData(song.url || '', abortController.signal);
+      const audioData = await this.fetchAudioData(song.audioUrl || '', abortController.signal);
       
       // 存储到缓存
       this.addToCache(songId, audioData);

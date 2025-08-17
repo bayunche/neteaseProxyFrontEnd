@@ -130,7 +130,7 @@ export class RealTimeMonitor {
     category: string,
     message: string,
     data: any = {},
-    severity: MonitoringEvent['severity'] = 'info',
+    severity: MonitoringEvent['severity'] = 'low',
     component: string = 'unknown',
     functionName: string = 'unknown'
   ): void {
@@ -211,7 +211,7 @@ export class RealTimeMonitor {
       'metrics',
       `Performance metric: ${metricName}`,
       { metricName, value, unit },
-      'info',
+      'low',
       component,
       'performance'
     );
@@ -235,7 +235,7 @@ export class RealTimeMonitor {
       message: `User action: ${action}`,
       data: details,
       timestamp: Date.now(),
-      severity: 'info',
+      severity: 'low',
       source: {
         component: 'user_interface',
         function: action,
@@ -607,7 +607,6 @@ export class RealTimeMonitor {
       case 'medium':
         return 'warn';
       case 'low':
-      case 'info':
       default:
         return 'log';
     }

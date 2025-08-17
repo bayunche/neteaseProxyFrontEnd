@@ -13,8 +13,8 @@ const getEnvVar = (key: string): string | undefined => {
 
 // 代理服务器配置
 export const PROXY_CONFIG = {
-  // 开发环境代理（统一使用公网服务器）
-  LOCAL: getEnvVar('VITE_AUDIO_PROXY_LOCAL') || 'http://8.134.196.44:3001',
+  // 开发环境代理（使用本地代理服务器）
+  LOCAL: getEnvVar('VITE_AUDIO_PROXY_LOCAL') || 'http://localhost:3001',
   
   // 生产环境代理（公网服务器地址）
   PRODUCTION: getEnvVar('VITE_AUDIO_PROXY_PRODUCTION') || 'http://8.134.196.44:3001',
@@ -26,10 +26,10 @@ export const PROXY_CONFIG = {
 
 /**
  * 获取当前环境的代理服务器地址
- * 注意：开发和生产环境都使用同一个公网代理服务器
+ * 注意：开发环境使用本地代理服务器，生产环境使用公网代理服务器
  */
 export function getProxyBaseUrl(): string {
-  // 检测环境（虽然两个环境都使用同一个服务器）
+  // 检测环境
   const isDevelopment = (() => {
     if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
       return true;

@@ -14,5 +14,5 @@
     "noPropertyAccessFromIndexSignature": false,
     "noImplicitOverride": false
   },
-  "exclude": ["dist", "**/*.test.ts", "**/*.spec.ts", "node_modules"]
+  "exclude": ["dist", "**/*.test.ts", "**/*.spec.ts", "**/__tests__/**", "node_modules"]
 }

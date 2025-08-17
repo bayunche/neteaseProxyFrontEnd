@@ -106,8 +106,15 @@ const StatsPage: React.FC = () => {
     }
   };
 
-  // 使用实际数据或模拟数据
+  // 使用实际数据或模拟数据，确保数据结构完整
   const currentStats = stats.data || mockStats;
+  
+  // 确保数据结构完整，防止空值引用
+  const safeStats = {
+    allTime: currentStats?.allTime || mockStats.allTime,
+    recent: currentStats?.recent || mockStats.recent,
+    trends: currentStats?.trends || mockStats.trends
+  };
 
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -297,26 +304,26 @@ const StatsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="总播放时长"
-                value={formatDuration(currentStats.allTime.totalPlayTime)}
+                value={formatDuration(safeStats.allTime?.totalPlayTime || 0)}
                 subtitle="所有时间"
                 icon={<Clock className="w-6 h-6 text-primary-600" />}
-                trend={currentStats.trends.playTimeGrowth}
+                trend={safeStats.trends?.playTimeGrowth}
               />
               <StatCard
                 title="播放歌曲"
-                value={currentStats.allTime.totalSongs}
-                subtitle={`${currentStats.allTime.uniqueSongs}首不重复`}
+                value={safeStats.allTime?.totalSongs || 0}
+                subtitle={`${safeStats.allTime?.uniqueSongs || 0}首不重复`}
                 icon={<Music className="w-6 h-6 text-primary-600" />}
               />
               <StatCard
                 title="喜爱艺术家"
-                value={currentStats.allTime.uniqueArtists}
-                subtitle={`最爱: ${currentStats.allTime.favoriteArtist || '暂无数据'}`}
+                value={safeStats.allTime?.uniqueArtists || 0}
+                subtitle={`最爱: ${safeStats.allTime?.favoriteArtist || '暂无数据'}`}
                 icon={<Headphones className="w-6 h-6 text-primary-600" />}
               />
               <StatCard
                 title="发现率"
-                value={`${(currentStats.trends.discoveryRate * 100).toFixed(1)}%`}
+                value={`${((safeStats.trends?.discoveryRate || 0) * 100).toFixed(1)}%`}
                 subtitle="新歌曲发现比例"
                 icon={<TrendingUp className="w-6 h-6 text-primary-600" />}
                 trend={5.2}
@@ -324,7 +331,7 @@ const StatsPage: React.FC = () => {
             </div>
 
             {/* 最爱歌曲 */}
-            {currentStats.allTime.favoriteSong && (
+            {safeStats.allTime?.favoriteSong && (
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                   <Heart className="w-5 h-5 text-red-500 mr-2" />
@@ -332,16 +339,16 @@ const StatsPage: React.FC = () => {
                 </h3>
                 <div className="flex items-center space-x-4 p-4 bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 rounded-lg">
                   <img
-                    src={currentStats.allTime.favoriteSong.coverUrl}
-                    alt={currentStats.allTime.favoriteSong.title || currentStats.allTime.favoriteSong.name}
+                    src={safeStats.allTime.favoriteSong.coverUrl}
+                    alt={safeStats.allTime.favoriteSong.title || safeStats.allTime.favoriteSong.name}
                     className="w-16 h-16 rounded-lg object-cover shadow-md"
                   />
                   <div>
                     <h4 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {currentStats.allTime.favoriteSong.title || currentStats.allTime.favoriteSong.name}
+                      {safeStats.allTime.favoriteSong.title || safeStats.allTime.favoriteSong.name}
                     </h4>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {currentStats.allTime.favoriteSong.artist}
+                      {safeStats.allTime.favoriteSong.artist}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                       您最常播放的歌曲
@@ -357,14 +364,19 @@ const StatsPage: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   本周热门歌曲
                 </h3>
-                <TopSongsList songs={currentStats.recent.lastWeek.topSongs} />
+                <TopSongsList songs={safeStats.recent?.lastWeek?.topSongs || []} />
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   播放模式偏好
                 </h3>
-                <PlayModeChart stats={currentStats.recent.yesterday.playModeStats} />
+                <PlayModeChart stats={safeStats.recent?.yesterday?.playModeStats || {
+                  sequence: 0,
+                  random: 0,
+                  single: 0,
+                  list_loop: 0
+                }} />
               </div>
             </div>
 
@@ -376,21 +388,21 @@ const StatsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600 mb-1">
-                    +{currentStats.trends.playTimeGrowth}%
+                    +{safeStats.trends?.playTimeGrowth || 0}%
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">播放时长增长</p>
                   <p className="text-xs text-gray-500 mt-1">相比上周</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600 mb-1">
-                    {(currentStats.trends.discoveryRate * 100).toFixed(1)}%
+                    {((safeStats.trends?.discoveryRate || 0) * 100).toFixed(1)}%
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">新歌发现率</p>
                   <p className="text-xs text-gray-500 mt-1">探索新音乐</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600 mb-1">
-                    {(currentStats.trends.repeatRate * 100).toFixed(1)}%
+                    {((safeStats.trends?.repeatRate || 0) * 100).toFixed(1)}%
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">重复播放率</p>
                   <p className="text-xs text-gray-500 mt-1">经典回味</p>

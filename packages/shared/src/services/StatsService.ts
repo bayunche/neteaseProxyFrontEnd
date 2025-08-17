@@ -164,7 +164,7 @@ export class StatsService {
     }
     
     // 开始新会话
-    this.startPlaySession(newSong, source);
+    this.startPlaySession(newSong);
   }
 
   /**

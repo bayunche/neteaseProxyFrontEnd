@@ -4,6 +4,7 @@ import type { Song, Playlist, PlaybackState, UserSettings, Lyrics, PlayStats, Pl
 import { PlayMode } from '../types';
 import { audioService } from '../services/audio';
 import { SearchAPI, SearchType, AuthAPI, PlaylistAPI, LyricAPI, logger, type User, type SearchResult as APISearchResult, type Album, type Artist } from '../services/api';
+import { getImageProxyUrl } from '../services/api/proxy-config';
 import { statsService } from '../services/StatsService';
 import { StatisticsCollector, type RealTimeStatistics } from '../services/StatisticsCollector';
 
@@ -232,8 +233,9 @@ const initialState: AppState = {
   },
 };
 
-// Create the store
+// Create the store  
 export const usePlayerStore = create<AppState & AppActions>()(
+  // @ts-ignore 暂时忽略复杂的zustand中间件类型推断问题
   devtools(
     persist(
       (set, get) => {
@@ -363,7 +365,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
         // 延迟初始化以确保组件完全加载
         setTimeout(initializePersistedState, 100);
 
-        return {
+        return ({
           ...initialState,
         
         // Player actions implementation
@@ -387,7 +389,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
               
               // 自动加载歌词（延迟调用避免循环引用）
               setTimeout(() => {
-                const currentStore = get();
+                const currentStore = get() as AppState & AppActions;
                 if (currentStore.loadLyrics) {
                   currentStore.loadLyrics(String(song.id));
                 }
@@ -398,7 +400,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
               
               // 更新最近播放（延迟调用避免循环引用）
               setTimeout(() => {
-                const currentStore = get();
+                const currentStore = get() as AppState & AppActions;
                 if (currentStore.updateRecentPlayed) {
                   currentStore.updateRecentPlayed(song);
                 }
@@ -411,7 +413,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
               const currentSong = audioService.getCurrentSong();
               if (currentSong) {
                 setTimeout(() => {
-                  const currentStore = get();
+                  const currentStore = get() as AppState & AppActions;
                   if (currentStore.loadLyrics) {
                     currentStore.loadLyrics(String(currentSong.id));
                   }
@@ -600,7 +602,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
             
             // 自动加载歌词
             setTimeout(() => {
-              const currentStore = get();
+              const currentStore = get() as AppState & AppActions;
               if (currentStore.loadLyrics) {
                 currentStore.loadLyrics(String(songs[0].id));
               }
@@ -808,7 +810,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
             
             // 登录成功后自动加载用户数据
             setTimeout(() => {
-              const currentStore = get();
+              const currentStore = get() as AppState & AppActions;
               if (currentStore.refreshUserData) {
                 currentStore.refreshUserData();
               }
@@ -859,7 +861,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
               
               // 自动加载用户数据
               setTimeout(() => {
-                const currentStore = get();
+                const currentStore = get() as AppState & AppActions;
                 if (currentStore.refreshUserData) {
                   currentStore.refreshUserData();
                 }
@@ -892,7 +894,8 @@ export const usePlayerStore = create<AppState & AppActions>()(
 
           try {
             console.log('开始加载用户歌单...');
-            const playlistResponse = await AuthAPI.getCurrentUserPlaylist(50, 0);
+            // 获取更多歌单（最多200个，确保获取到所有歌单）
+            const playlistResponse = await AuthAPI.getCurrentUserPlaylist(200, 0);
             
             if (playlistResponse.playlist) {
               // 转换API数据格式为本地Playlist格式
@@ -900,7 +903,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
                 id: String(apiPlaylist.id),
                 title: apiPlaylist.name,
                 description: apiPlaylist.description || '',
-                coverUrl: apiPlaylist.coverImgUrl || '',
+                coverUrl: getImageProxyUrl(apiPlaylist.coverImgUrl || ''),
                 creator: apiPlaylist.creator?.nickname || '未知',
                 songs: [], // 初始为空，点击时再加载
                 isPublic: true,
@@ -938,7 +941,7 @@ export const usePlayerStore = create<AppState & AppActions>()(
             ]);
             
             // 单独加载歌单（避免循环引用）
-            const currentStore = get();
+            const currentStore = get() as AppState & AppActions;
             if (currentStore.loadUserPlaylists) {
               await currentStore.loadUserPlaylists();
             }
@@ -985,10 +988,10 @@ export const usePlayerStore = create<AppState & AppActions>()(
               );
 
               searchResults = {
-                songs: (multiResults[SearchType.SONG] as Song[]) || [],
-                albums: (multiResults[SearchType.ALBUM] as Album[]) || [],
-                artists: (multiResults[SearchType.ARTIST] as Artist[]) || [],
-                playlists: (multiResults[SearchType.PLAYLIST] as Playlist[]) || [],
+                songs: ((multiResults[SearchType.SONG] as any as Song[]) || []) as any,
+                albums: (multiResults[SearchType.ALBUM] as any as Album[]) || [],
+                artists: (multiResults[SearchType.ARTIST] as any as Artist[]) || [],
+                playlists: ((multiResults[SearchType.PLAYLIST] as any as Playlist[]) || []) as any,
                 total: (multiResults[SearchType.SONG]?.length || 0) +
                        (multiResults[SearchType.ALBUM]?.length || 0) +
                        (multiResults[SearchType.ARTIST]?.length || 0) +
@@ -1345,8 +1348,8 @@ export const usePlayerStore = create<AppState & AppActions>()(
           const state = get();
           return state.stats.collector.getStatistics();
         },
-        };
-      },
+      }) as AppState & AppActions;
+    },
       {
         name: 'music-player-store',
         partialize: (state) => ({

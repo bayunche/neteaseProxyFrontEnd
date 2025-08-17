@@ -21,7 +21,7 @@ export type AudioQuality = typeof AudioQuality[keyof typeof AudioQuality];
 
 // Core music data models (now that types are defined)
 export interface Song {
-  id: string | number;
+  id: number | string;  // 兼容两种类型，但优先使用number
   title?: string;
   name?: string; // API字段
   artist?: string;
@@ -61,6 +61,7 @@ export interface Artist {
 export interface Playlist {
   id: string;
   title: string;
+  name?: string;  // API兼容字段
   description: string;
   coverUrl: string;
   creator: string;

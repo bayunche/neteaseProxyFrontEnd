@@ -225,6 +225,7 @@ export interface ApiPlaylistForSearch {
   coverImgUrl?: string;
   description?: string;
   creator?: {
+    id: number;
     userId: number;
     nickname: string;
     avatarUrl: string;

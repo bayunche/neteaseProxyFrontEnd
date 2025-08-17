@@ -303,7 +303,7 @@ export class PerformanceMonitoringService {
       if (navigation) {
         this.recordMetric({
           name: 'page_load_time',
-          value: navigation.loadEventEnd - navigation.navigationStart,
+          value: navigation.loadEventEnd - navigation.fetchStart,
           unit: 'ms',
           category: 'timing',
           timestamp: Date.now(),
@@ -311,7 +311,7 @@ export class PerformanceMonitoringService {
 
         this.recordMetric({
           name: 'dom_content_loaded',
-          value: navigation.domContentLoadedEventEnd - navigation.navigationStart,
+          value: navigation.domContentLoadedEventEnd - navigation.fetchStart,
           unit: 'ms',
           category: 'timing',
           timestamp: Date.now(),
@@ -402,10 +402,15 @@ export class PerformanceMonitoringService {
 
     // 发送到分析服务
     if (this.analyticsService) {
+      // 只传递analytics支持的单位类型
+      const analyticsUnit = ['ms', 'seconds', 'bytes'].includes(metric.unit) 
+        ? (metric.unit as 'ms' | 'seconds' | 'bytes')
+        : 'ms';
+      
       this.analyticsService.trackPerformance(
         metric.name as any,
         metric.value,
-        metric.unit
+        analyticsUnit
       );
 
       this.analyticsService.track({

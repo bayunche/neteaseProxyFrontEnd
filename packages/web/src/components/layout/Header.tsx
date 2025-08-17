@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Menu, Sun, Moon, User, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from "@music-player/shared/stores";
 import { styled } from '../../styles/stitches.config';
 import { motion } from 'framer-motion';
 import { GlassContainer } from '../glass/GlassCard';
 import { GlassButton, IconButton } from '../glass/GlassButton';
-import LoginModal from '../auth/LoginModal';
 
 // 样式化组件
 const HeaderContainer = styled(GlassContainer, {
@@ -209,9 +209,9 @@ const LogoutButton = styled(motion.button, {
 });
 
 const Header: React.FC = () => {
+  const navigate = useNavigate();
   const { ui, user, toggleSidebar, setTheme, logout, checkLoginStatus } = usePlayerStore();
   const { theme } = ui;
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleThemeToggle = () => {
@@ -336,19 +336,16 @@ const Header: React.FC = () => {
             variant="primary"
             size="sm"
             glow
-            onClick={() => setShowLoginModal(true)}
+            onClick={() => {
+              console.log('Login button clicked');
+              navigate('/login');
+            }}
           >
             <User size={16} />
             <span>登录</span>
           </GlassButton>
         )}
       </HeaderSection>
-
-      {/* Login Modal */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
     </HeaderContainer>
   );
 };

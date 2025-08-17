@@ -9,7 +9,19 @@ export default defineConfig({
       '/api': {
         target: 'http://8.134.196.44:8210',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => {
+          console.log('代理请求:', path);
+          return path;
+        },
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            console.log('代理请求详情:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req) => {
+            console.log('代理响应:', proxyRes.statusCode, req.url);
+          });
+        }
       },
       // 代理音频文件 - 简化版本
       '^/audio/.*': {

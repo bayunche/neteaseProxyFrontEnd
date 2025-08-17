@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Music, Heart, Clock, Plus, Grid, List } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Music, Heart, Clock, Plus, Grid, List, RefreshCw, AlertCircle } from 'lucide-react';
 import { usePlayerStore } from "@music-player/shared/stores";
 import { cn } from '../utils/cn';
 import SongList from '../components/music/SongList';
@@ -7,18 +8,21 @@ import PlaylistCard from '../components/playlist/PlaylistCard';
 import type { Song } from "@music-player/shared/types";
 
 const LibraryPage: React.FC = () => {
+  const navigate = useNavigate();
   const {
     user,
     playAllSongs,
     createPlaylist,
     loadUserPlaylists,
-    checkLoginStatus
+    loadPlaylistDetail
   } = usePlayerStore();
 
   const [activeTab, setActiveTab] = useState('playlists');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { isLoggedIn, playlists, favorites, recentPlayed } = user;
 
@@ -29,10 +33,52 @@ const LibraryPage: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (isLoggedIn) {
-      loadUserPlaylists();
-    }
+    const loadPlaylistsWithStatus = async () => {
+      if (isLoggedIn) {
+        setIsLoading(true);
+        setError(null);
+        try {
+          await loadUserPlaylists();
+          console.log('用户歌单加载完成');
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : '加载歌单失败';
+          setError(errorMessage);
+          console.error('加载用户歌单失败:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadPlaylistsWithStatus();
   }, [isLoggedIn, loadUserPlaylists]);
+
+  // 当切换tab时的处理逻辑
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const loadTabData = async () => {
+      try {
+        switch (activeTab) {
+          case 'playlists':
+            // 歌单tab已经在登录时自动加载了
+            break;
+          case 'favorites':
+            // 可以在这里添加收藏歌曲的刷新逻辑
+            console.log('切换到收藏tab，当前收藏数量:', favorites.length);
+            break;
+          case 'recent':
+            // 可以在这里添加最近播放的刷新逻辑
+            console.log('切换到最近播放tab，当前播放记录:', recentPlayed.length);
+            break;
+        }
+      } catch (error) {
+        console.error('加载tab数据失败:', error);
+      }
+    };
+
+    loadTabData();
+  }, [activeTab, isLoggedIn, favorites.length, recentPlayed.length]);
 
   const handleCreatePlaylist = () => {
     if (newPlaylistName.trim()) {
@@ -48,6 +94,45 @@ const LibraryPage: React.FC = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!isLoggedIn) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      await loadUserPlaylists();
+      console.log('手动刷新歌单完成');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '刷新歌单失败';
+      setError(errorMessage);
+      console.error('手动刷新歌单失败:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePlaylistClick = async (playlist: { id: string; title: string; songs?: Song[] }) => {
+    try {
+      console.log('点击歌单，开始加载详情:', playlist.title);
+      
+      // 如果歌单还没有歌曲详情，自动加载
+      if (!playlist.songs || playlist.songs.length === 0) {
+        console.log('歌单暂无歌曲，正在加载详情...');
+        const detailedPlaylist = await loadPlaylistDetail(playlist.id);
+        if (detailedPlaylist) {
+          console.log(`歌单详情加载完成: "${detailedPlaylist.title}", ${detailedPlaylist.songs.length}首歌曲`);
+        }
+      }
+      
+      // 导航到歌单详情页
+      navigate(`/playlist/${playlist.id}`);
+    } catch (error) {
+      console.error('加载歌单详情失败:', error);
+      // 即使加载失败也导航到歌单页，让用户知道发生了什么
+      navigate(`/playlist/${playlist.id}`);
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'playlists':
@@ -58,6 +143,14 @@ const LibraryPage: React.FC = () => {
                 我的歌单 ({playlists.length})
               </h2>
               <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+                  <span>刷新</span>
+                </button>
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="flex items-center space-x-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
@@ -92,7 +185,32 @@ const LibraryPage: React.FC = () => {
               </div>
             </div>
 
-            {playlists.length === 0 ? (
+            {/* 错误显示 */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center space-x-2 text-red-700 dark:text-red-400">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-medium">加载失败</span>
+                </div>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-300">{error}</p>
+                <button
+                  onClick={handleRefresh}
+                  className="mt-2 px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-300 rounded text-sm transition-colors"
+                >
+                  重试
+                </button>
+              </div>
+            )}
+
+            {/* 加载状态 */}
+            {isLoading && playlists.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                <RefreshCw className="w-8 h-8 mb-4 animate-spin" />
+                <p>正在加载歌单...</p>
+              </div>
+            )}
+
+            {!isLoading && playlists.length === 0 && !error ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
                 <Music className="w-16 h-16 mb-4 opacity-50" />
                 <p className="mb-2">还没有创建任何歌单</p>
@@ -114,6 +232,7 @@ const LibraryPage: React.FC = () => {
                     key={playlist.id}
                     playlist={playlist}
                     variant={viewMode === 'grid' ? 'card' : 'compact'}
+                    onClick={handlePlaylistClick}
                   />
                 ))}
               </div>
@@ -192,7 +311,7 @@ const LibraryPage: React.FC = () => {
         <Music className="w-16 h-16 mb-4 opacity-50" />
         <p className="mb-4">请先登录以查看您的音乐库</p>
         <button
-          onClick={checkLoginStatus}
+          onClick={() => navigate('/login')}
           className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
         >
           登录

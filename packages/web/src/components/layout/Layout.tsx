@@ -1,4 +1,5 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import { usePlayerStore } from "@music-player/shared/stores";
 import { styled, darkTheme } from '../../styles/stitches.config';
 import { motion } from 'framer-motion';
@@ -52,7 +53,7 @@ const ContentArea = styled('div', {
 
 const MainContent = styled('main', {
   flex: 1,
-  overflowY: 'auto',
+  overflow: 'hidden',
   transition: 'all $normal',
   position: 'relative',
 });
@@ -72,7 +73,8 @@ const PageContent = styled(motion.div, {
   
   '& > div': {
     flex: 1,
-    overflow: 'hidden',
+    overflowY: 'auto',
+    height: '100%',
   },
 });
 
@@ -85,11 +87,7 @@ const LyricsPanelContainer = styled(GlassContainer, {
   intensity: 'heavy',
 });
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC = () => {
   const { ui, toggleQueue } = usePlayerStore();
   const { theme, showQueue, showLyrics } = ui;
 
@@ -120,8 +118,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                <div>
-                  {children}
+                <div className="scrollbar-custom">
+                  <Outlet />
                 </div>
               </PageContent>
               
